@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<title>LearnLock — Finish what you start</title>
+
+<link rel="stylesheet" href="style.css" />
+<link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+</head>
+<body>
+
+<!-- ===================== LOADING VIEW ===================== -->
+<div id="view-loading" class="view">
+  <div class="shell" style="text-align:center; padding-top:100px;">
+    <p class="muted-note">Loading your learning progress…</p>
+  </div>
+</div>
+
+<!-- ===================== LOAD ERROR VIEW ===================== -->
+<div id="view-load-error" class="view">
+  <div class="shell" style="text-align:center; padding-top:100px;">
+    <p class="muted-note" style="margin-bottom:18px;">We couldn't load your data. Please check your connection and try again.</p>
+    <button class="btn-primary" id="btn-retry-load" style="max-width:200px; margin:0 auto;">Try again</button>
+  </div>
+</div>
+
+<!-- ===================== AUTH VIEW ===================== -->
+<div id="view-auth" class="view active">
+  <div class="auth-wrap">
+    <h1 class="auth-hero">Learn<span class="lock-mark">Lock</span></h1>
+    <p class="auth-sub">Don't try to finish everything today. Just finish today's module.</p>
+
+    <div class="setup-note" id="setup-note">
+      <strong>One-time setup:</strong> this app needs a free Firebase project to store accounts and progress.
+      Open <code>firebase-config.js</code> and follow the instructions inside it. Takes about 5 minutes and costs nothing.
+    </div>
+
+    <div class="auth-error" id="auth-error"></div>
+
+    <form id="auth-form">
+      <div class="field">
+        <label for="auth-email">Email</label>
+        <input type="email" id="auth-email" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="auth-password">Password</label>
+        <input type="password" id="auth-password" required autocomplete="current-password" minlength="6" />
+        <button type="button" id="forgot-password-btn" class="auth-forgot">
+  Forgot password?
+</button>
+      </div>
+      <button type="submit" class="btn-primary" id="auth-submit-btn">Log in</button>
+    </form>
+
+    <div class="auth-toggle">
+      <span id="auth-toggle-text">New to LearnLock?</span>
+      <button type="button" id="auth-toggle-btn">Create an account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== DASHBOARD VIEW ===================== -->
+<div id="view-dashboard" class="view">
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand">Learn<span class="lock-mark">Lock</span></div>
+      <div class="topbar-right">
+        <span id="user-email-label"></span>
+        <button class="icon-btn" id="logout-btn">Log out</button>
+      </div>
+    </div>
+
+    <div id="continue-learning-card" class="continue-card" style="display:none;"></div>
+
+    <div id="level-banner" class="level-banner"></div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-num streak"><span id="stat-streak">0</span> 🔥</div>
+        <div class="stat-label">Day streak</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num points" id="stat-points">0</div>
+        <div class="stat-label">XP</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="stat-modules">0</div>
+        <div class="stat-label">Modules done</div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <div class="section-title">Your courses</div>
+      <span class="muted-note" id="course-count-note">0 / 3 active</span>
+    </div>
+
+    <div id="course-list"></div>
+
+    <button class="btn-new-course" id="btn-new-course">+ Add a new course</button>
+
+<!-- Course invites someone sent ME, waiting for my Accept/Reject -->
+<div class="section-head" style="margin-top:36px;">
+  <div class="section-title">Course Invites</div>
+</div>
+<div id="incoming-invites-list"></div>
+
+<!-- Course invites I sent, still waiting on the other person -->
+<div id="outgoing-invites-list"></div>
+
+<div class="section-head" style="margin-top:36px;">
+  <div class="section-title">Shared With Friends</div>
+</div>
+<div id="shared-course-list"></div>
+
+    <div class="section-head" style="margin-top:36px;">
+      <div class="section-title">Achievements</div>
+    </div>
+    <div class="badge-row" id="badge-row"></div>
+
+    <div class="section-head" style="margin-top:36px;">
+  <div class="section-title">Rewards</div>
+</div>
+<p class="muted-note" style="margin-bottom:10px;">Each module = 50 XP. Streak bonuses: 3 days +50, 7 days +150, 15 days +500, 30 days +2,000 XP. Miss a day with 4,000+ XP saved and it auto-continues your streak — otherwise it resets to 0 (you can keep learning right away either way).</p>
+<div class="badge-row" id="reward-row"></div>
+
+<div class="section-head" style="margin-top:36px;">
+  <div class="section-title">Streak Milestones</div>
+</div>
+<div class="badge-row" id="streak-milestone-row"></div>
+
+<div class="section-head" style="margin-top:36px;">
+  <div class="section-title">Learning Streak Calendar</div>
+</div>
+<div id="streak-calendar"></div>
+
+<div class="section-head" style="margin-top:36px;">
+  <div class="section-title">Friends</div>
+</div>
+
+<div class="friend-add-row">
+  <input type="email" id="friend-email-input" placeholder="Friend's email" />
+  <button class="btn-primary" id="btn-add-friend">Add friend</button>
+</div>
+
+<div id="friend-requests-list"></div>
+
+<button class="btn-new-course" data-nav="friends" style="margin-top:12px;">👥 My Friends</button>
+  </div>
+</div>
+
+<!-- ===================== COURSE BUILDER VIEW ===================== -->
+<div id="view-builder" class="view">
+  <div class="shell">
+    <div class="topbar">
+     <button class="back-link" id="btn-back-to-plan">
+  ← Back to plan
+</button>
+    </div>
+
+    <div class="section-title" style="margin-bottom:18px;">New course</div>
+
+    <div class="field">
+      <label for="course-name">Course name</label>
+      <input type="text" id="course-name" placeholder="e.g. Cybersecurity Full Course" />
+    </div>
+
+    <div class="field">
+      <label for="course-source">Course link (optional — YouTube, Coursera, Udemy, anything)</label>
+      <input type="text" id="course-source" placeholder="https://..." />
+    </div>
+
+    <div class="section-head" style="margin-top:26px;">
+      <div class="section-title" style="font-size:16px;">Modules</div>
+      <span class="muted-note">1 module = 1 day</span>
+    </div>
+
+    <div id="module-rows"></div>
+    <button class="btn-add-module" id="btn-add-module">+ Add module</button>
+
+    <button class="btn-primary" id="btn-create-plan">Create learning plan</button>
+  </div>
+</div>
+
+<!-- ===================== FRIENDS VIEW ===================== -->
+<div id="view-friends" class="view">
+  <div class="shell">
+    <div class="topbar">
+      <button class="back-link" data-nav="dashboard">← Back</button>
+    </div>
+
+    <div class="section-title" style="margin-bottom:18px;">My Friends</div>
+
+    <div id="friends-list"></div>
+  </div>
+</div>
+
+<!-- ===================== PATH VIEW ===================== -->
+<div id="view-path" class="view">
+  <div class="shell">
+    <div class="topbar">
+      <button class="back-link" data-nav="dashboard">← Back</button>
+    </div>
+
+    <div class="section-title" id="path-course-title" style="margin-bottom:4px;"></div>
+    <p class="muted-note" id="path-course-meta" style="margin-bottom:24px;"></p>
+
+    <div class="path" id="path-container"></div>
+
+  </div>
+</div>
+
+<!-- ===================== MODULE DASHBOARD VIEW ===================== -->
+<div id="view-module" class="view">
+  <div class="shell">
+    <div class="topbar">
+      <button class="back-link" id="btn-back-to-plan">
+  ← Back to plan
+</button>
+    </div>
+
+    <div class="module-stage">
+      <div class="module-day-tag" id="module-day-tag"></div>
+      <div class="module-title" id="module-title"></div>
+
+<div class="youtube-player-wrap">
+  <div class="youtube-player-frame" id="youtube-player-frame">
+  <div id="youtube-player"></div>
+</div>
+</div>
+  
+      <div class="timer-display" id="timer-display">00:00:00</div>
+      <div class="timer-label" id="timer-label">Time remaining</div>
+
+      <div class="timer-controls">
+        <button class="btn-timer-main" id="btn-timer-start">▶ Start learning</button>
+        <button class="btn-timer-ghost" id="btn-timer-pause" style="display:none;">⏸ Pause</button>
+      </div>
+
+      <button class="btn-complete" id="btn-complete-module" disabled>Complete module</button>
+      <p class="extra-note">Reach 00:00:00 to unlock completion. Keep studying past it if you want — extra time still earns bonus points.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDKs (free tier — no billing required for these) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="app.js"></script>
+</body>
+</html>
