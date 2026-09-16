@@ -3,7 +3,20 @@
    All the app's behavior lives here. Read the comments — they
    explain what each part does, since you're new to coding.
 =========================================================== */
+// Disable auto-ad loading — we'll control when ads show
+const originalGoogleFill = window.adsbygoogle?.push || (() => {});
+let adLoadCount = 0;
+const MAX_ADS_PER_SESSION = 1; // Only ONE ad per session
 
+window.adsbygoogle = window.adsbygoogle || [];
+window.adsbygoogle.push = function(config) {
+  adLoadCount++;
+  if (adLoadCount > MAX_ADS_PER_SESSION) {
+    console.warn('Ad blocked: too many ads this session');
+    return; // Skip loading this ad
+  }
+  originalGoogleFill(config);
+};
 const MAX_ACTIVE_COURSES = 3;
 const POINTS_PER_MODULE = 50;
 const STREAK_RECOVERY_COST = 4000;
