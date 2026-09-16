@@ -1,44 +1,8 @@
-// ONE ad per module session
-let adShownThisSession = false;
-
-function openModule(moduleId) {
-  reviewMode = false;
-  activeModuleId = moduleId;
-  
-  // Reset ad flag when starting a new module
-  adShownThisSession = false;
-  
-  // ... rest of your openModule code stays the same ...
-}
-
-// Before showing the ad
-if (!adShownThisSession && typeof adsbygoogle !== 'undefined') {
-  try {
-    (adsbygoogle = window.adsbygoogle || []).push({});
-    adShownThisSession = true;
-  } catch (e) {
-    console.log('Ad load skipped');
-  }
-}
 /* ===========================================================
    LEARNLOCK — app.js
    All the app's behavior lives here. Read the comments — they
    explain what each part does, since you're new to coding.
 =========================================================== */
-// Disable auto-ad loading — we'll control when ads show
-const originalGoogleFill = window.adsbygoogle?.push || (() => {});
-let adLoadCount = 0;
-const MAX_ADS_PER_SESSION = 1; // Only ONE ad per session
-
-window.adsbygoogle = window.adsbygoogle || [];
-window.adsbygoogle.push = function(config) {
-  adLoadCount++;
-  if (adLoadCount > MAX_ADS_PER_SESSION) {
-    console.warn('Ad blocked: too many ads this session');
-    return; // Skip loading this ad
-  }
-  originalGoogleFill(config);
-};
 const MAX_ACTIVE_COURSES = 3;
 const POINTS_PER_MODULE = 50;
 const STREAK_RECOVERY_COST = 4000;
@@ -1639,7 +1603,7 @@ function createYouTubePlayer(videoId, startSeconds) {
 
   container.innerHTML = '';
 
-  youtubePlayer = new YT.Player('youtube-player', {
+ youtubePlayer = new YT.Player('youtube-player', {
     videoId: videoId,
 
     playerVars: {
@@ -1648,6 +1612,10 @@ function createYouTubePlayer(videoId, startSeconds) {
       start: startSeconds,
       enablejsapi: 1,
       playsinline: 1,
+      modestbranding: 1,
+      rel: 0,
+      fs: 1,
+      iv_load_policy: 3,
       origin: window.location.origin
     },
 
