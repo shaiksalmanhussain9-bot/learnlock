@@ -1,3 +1,25 @@
+// ONE ad per module session
+let adShownThisSession = false;
+
+function openModule(moduleId) {
+  reviewMode = false;
+  activeModuleId = moduleId;
+  
+  // Reset ad flag when starting a new module
+  adShownThisSession = false;
+  
+  // ... rest of your openModule code stays the same ...
+}
+
+// Before showing the ad
+if (!adShownThisSession && typeof adsbygoogle !== 'undefined') {
+  try {
+    (adsbygoogle = window.adsbygoogle || []).push({});
+    adShownThisSession = true;
+  } catch (e) {
+    console.log('Ad load skipped');
+  }
+}
 /* ===========================================================
    LEARNLOCK — app.js
    All the app's behavior lives here. Read the comments — they
