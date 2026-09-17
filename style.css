@@ -1102,7 +1102,9 @@ a:focus-visible {
 /* ---------- Video player (responsive at every screen size) ---------- */
 .youtube-player-wrap {
   width: 100%;
+  max-width: 100vw; /* never wider than screen */
   margin-bottom: 20px;
+  padding: 0 4px;   /* small inner gap so it doesn't touch edges */
 }
 
 .youtube-player-frame {
@@ -1121,6 +1123,27 @@ a:focus-visible {
   width: 100% !important;
   height: 100% !important;
   border: none;
+}
+
+/* Mobile fixes: ensure video never overflows */
+@media (max-width: 480px) {
+  .youtube-player-wrap {
+    max-width: calc(100vw - 24px); /* leave some margin from edges */
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .youtube-player-frame {
+    border-radius: 6px;
+  }
+
+  /* If you have any custom width on #youtube-player, this overrides it */
+  #youtube-player,
+  #youtube-player iframe {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
 }
 
 /* ============ COURSE PATH VIEW ============ */
