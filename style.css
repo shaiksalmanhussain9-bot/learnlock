@@ -1093,3 +1093,60 @@ a:focus-visible {
 .cancel-share:hover {
   color: var(--text);
 }
+/* ============ VIDEO PLAYER RESPONSIVE FIX ============ */
+.youtube-player-wrap {
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.youtube-player-frame {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  height: 0;
+  overflow: hidden;
+  background-color: #000;
+}
+
+.youtube-player-frame iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+  border: none;
+}
+
+#youtube-player {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .module-stage {
+    padding: 16px;
+  }
+
+  .youtube-player-wrap {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 16px;
+  }
+
+  .youtube-player-frame {
+    width: 100vw;
+    margin-left: -16px;
+    padding-bottom: 56.25%;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .youtube-player-frame {
+    padding-bottom: 56.25%;
+  }
+}
