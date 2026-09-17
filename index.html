@@ -3,11 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
 <title>LearnLock — Finish what you start</title>
-
 <link rel="stylesheet" href="style.css" />
-<link rel="icon" href="./favicon.svg" type="image/svg+xml" />
 </head>
 <body>
 
@@ -154,9 +151,7 @@
 <div id="view-builder" class="view">
   <div class="shell">
     <div class="topbar">
-     <button class="back-link" id="btn-back-to-plan">
-  ← Back to plan
-</button>
+      <button class="back-link" data-nav="dashboard">← Back</button>
     </div>
 
     <div class="section-title" style="margin-bottom:18px;">New course</div>
@@ -215,34 +210,15 @@
 <div id="view-module" class="view">
   <div class="shell">
     <div class="topbar">
-      <button class="back-link" id="btn-back-to-plan">
-  ← Back to plan
-</button>
+      <button class="back-link" data-nav="path">← Back to plan</button>
     </div>
 
     <div class="module-stage">
       <div class="module-day-tag" id="module-day-tag"></div>
       <div class="module-title" id="module-title"></div>
 
-<!-- Single controlled ad placement -->
-<div id="module-ad-container" style="text-align:center; margin:12px 0; min-height:90px;">
-  <ins class="adsbygoogle"
-       style="display:block"
-       data-ad-client="ca-pub-YOUR_PUB_ID"
-       data-ad-slot="YOUR_AD_SLOT"
-       data-ad-format="auto"
-       data-full-width-responsive="false"></ins>
-</div>
-<script>
-  (adsbygoogle = window.adsbygoogle || []).push({});
-</script>
-      
-<div class="youtube-player-wrap">
-  <div class="youtube-player-frame" id="youtube-player-frame">
-  <div id="youtube-player"></div>
-</div>
-</div>
-  
+      <div class="youtube-player" id="youtube-player"></div>
+
       <div class="timer-display" id="timer-display">00:00:00</div>
       <div class="timer-label" id="timer-label">Time remaining</div>
 
@@ -266,10 +242,6 @@
 
 <script src="firebase-config.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
-<!-- Google AdSense (manual, controlled placement only) -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR_PUB_ID"
-  crossorigin="anonymous"></script>
-
 <script src="app.js"></script>
 </body>
 </html>
