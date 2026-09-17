@@ -447,56 +447,34 @@ function checkNewRewards() {
 
   return newlyEarned;
 }
-function renderBadges() {
-  const row = $('badge-row');
-  row.innerHTML = '';
 
-  ACHIEVEMENTS.forEach(a => {
-    const earned = userStats.achievements.includes(a.id);
-    const prog = a.progress ? a.progress(userStats) : null;
-    const div = document.createElement('div');
+// ============ RENDER BADGES (FIXED) ============
+function renderBadges(badges, containerId) {
+  const container = $(containerId);
+  if (!container) return;
 
-    let stateClass, stateLabel;
-    if (earned) {
-      stateClass = 'earned';
-      stateLabel = 'Completed ✓';
-    } else if (prog && prog.current > 0) {
-      stateClass = 'in-progress';
-      stateLabel = `In progress · ${prog.current}/${prog.target}`;
-    } else {
-      stateClass = 'locked';
-      stateLabel = 'Locked';
-    }
+  // Safety check: ensure badges is an array
+  if (!badges || !Array.isArray(badges)) {
+    container.innerHTML = '';
+    return;
+  }
 
-    div.className = 'badge ' + stateClass;
-    div.innerHTML = `
-      <span class="badge-icon">${a.icon}</span>
-      <div class="badge-body">
-        <span class="badge-name">${a.label}</span>
-        <span class="badge-state">${stateLabel}</span>
-      </div>
+  container.innerHTML = '';
+
+  badges.forEach(badge => {
+    // Skip undefined or invalid badges
+    if (!badge || typeof badge !== 'object') return;
+    
+    // Check that badge has required properties
+    if (!badge.icon || !badge.label) return;
+
+    const badgeEl = document.createElement('div');
+    badgeEl.className = 'badge';
+    badgeEl.innerHTML = `
+      <div class="badge-icon">${badge.icon}</div>
+      <div class="badge-label">${badge.label}</div>
     `;
-
-      row.appendChild(div);
-  });
-}
-
-function renderRewards() {
-  const row = $('reward-row');
-  row.innerHTML = '';
-
-  REWARDS.forEach(reward => {
-    const earned = userStats.rewards.includes(reward.points);
-
-    const div = document.createElement('div');
-    div.className = 'badge ' + (earned ? 'earned' : 'locked');
-
-    div.innerHTML = `
-      <span class="badge-icon">${reward.icon}</span>
-      <span>${reward.label}</span>
-    `;
-
-    row.appendChild(div);
+    container.appendChild(badgeEl);
   });
 }
 
