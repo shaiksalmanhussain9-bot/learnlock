@@ -1259,11 +1259,67 @@ function getCourse(courseId) {
   return coursesCache.find(c => c.id === courseId);
 }
 
-function openCoursePath(courseId) {
-  activeCourseId = courseId;
-   activeCourseType = 'personal';
-  renderPath();
-  showView('path');
+// ============ OPEN PATH ============
+function openPath(courseId) {
+  const course = userCourses.find(c => c.id === courseId);
+  if (!course) return;
+
+  $('path-course-title').textContent = course.name;
+  $('path-course-meta').textContent = `${course.modules.length} modules`;
+
+  const pathContainer = $('path-container');
+  pathContainer.innerHTML = '';
+
+  course.modules.forEach((module, index) => {
+    const isCompleted = module.completed;
+    const isNext = !isCompleted && course.modules.slice(0, index).every(m => m.completed);
+    const isLocked = !isCompleted && !isNext;
+
+    const moduleEl = document.createElement('div');
+    moduleEl.className = `path-module ${isCompleted ? 'completed' : isNext ? 'active' : 'locked'}`;
+    
+    let statusBadge = '';
+    if (isCompleted) {
+      statusBadge = '✅ Completed';
+    } else if (isNext) {
+      statusBadge = '▶ Continue';
+    } else {
+      statusBadge = '🔒 Locked';
+    }
+
+    let actionButton = '';
+    if (isCompleted) {
+      actionButton = `<button class="btn-watch" data-course-id="${courseId}" data-module-index="${index}">👁 Watch again</button>`;
+    } else if (isNext) {
+      actionButton = `<button class="btn-continue-module" data-course-id="${courseId}" data-module-index="${index}">▶ Start module</button>`;
+    }
+
+    moduleEl.innerHTML = `
+      <div class="path-module-header">
+        <div class="path-day">Day ${index + 1}</div>
+        <div class="path-status">${statusBadge}</div>
+      </div>
+      <div class="path-module-title">${module.name}</div>
+      <div class="path-module-time">${module.minutes || 30} minutes</div>
+      ${actionButton}
+    `;
+
+    if (isCompleted) {
+      moduleEl.querySelector('.btn-watch')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openModule(courseId, index);
+      });
+    } else if (isNext) {
+      moduleEl.querySelector('.btn-continue-module')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openModule(courseId, index);
+      });
+    }
+
+    pathContainer.appendChild(moduleEl);
+  });
+
+  showView('view-path');
 }
 
 // If a module has sub-modules, returns the first one that isn't
