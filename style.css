@@ -1150,3 +1150,142 @@ a:focus-visible {
     padding-bottom: 56.25%;
   }
 }
+/* ============ COURSE PATH VIEW ============ */
+.view-path {
+  background: linear-gradient(135deg, #1a1f3a 0%, #0f1419 100%);
+}
+
+#path-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.path-module {
+  background: #1e2433;
+  border: 2px solid #2a3150;
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.path-module:hover {
+  border-color: #ff9f1c;
+  background: #252d42;
+  transform: translateX(4px);
+}
+
+.path-module.completed {
+  border-color: #2ecc71;
+  background: rgba(46, 204, 113, 0.05);
+}
+
+.path-module.active {
+  border-color: #ff9f1c;
+  background: rgba(255, 159, 28, 0.05);
+  box-shadow: 0 0 20px rgba(255, 159, 28, 0.2);
+}
+
+.path-module.locked {
+  opacity: 0.6;
+  border-color: #34495e;
+  background: #14171f;
+  cursor: not-allowed;
+}
+
+.path-module-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.path-day {
+  font-size: 14px;
+  font-weight: bold;
+  color: #ff9f1c;
+  background: rgba(255, 159, 28, 0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.path-status {
+  font-size: 12px;
+  font-weight: bold;
+  color: #95a5a6;
+}
+
+.path-module.completed .path-status {
+  color: #2ecc71;
+}
+
+.path-module.active .path-status {
+  color: #ff9f1c;
+}
+
+.path-module.locked .path-status {
+  color: #7f8c8d;
+}
+
+.path-module-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ecf0f1;
+  margin-bottom: 6px;
+}
+
+.path-module-time {
+  font-size: 13px;
+  color: #95a5a6;
+  margin-bottom: 12px;
+}
+
+.btn-watch,
+.btn-continue-module {
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-watch {
+  background: #3498db;
+  color: white;
+}
+
+.btn-watch:hover {
+  background: #2980b9;
+  transform: scale(1.02);
+}
+
+.btn-continue-module {
+  background: #ff9f1c;
+  color: #000;
+}
+
+.btn-continue-module:hover {
+  background: #ffb840;
+  transform: scale(1.02);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .path-module {
+    padding: 14px;
+  }
+
+  .path-module-title {
+    font-size: 16px;
+  }
+
+  .btn-watch,
+  .btn-continue-module {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
