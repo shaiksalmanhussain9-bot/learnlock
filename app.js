@@ -1079,7 +1079,6 @@ function renderDashboard() {
   }
 
   renderBadges();
-  renderRewards();
   renderContinueLearningCard();
   renderLevelBanner();
   renderStreakMilestones();
