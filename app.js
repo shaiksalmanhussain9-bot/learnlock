@@ -3,6 +3,7 @@
    All the app's behavior lives here. Read the comments — they
    explain what each part does, since you're new to coding.
 =========================================================== */
+
 const MAX_ACTIVE_COURSES = 3;
 const POINTS_PER_MODULE = 50;
 const STREAK_RECOVERY_COST = 4000;
@@ -1437,8 +1438,8 @@ function extractYouTubeId(url) {
       }
 
       const match = u.pathname.match(
-  /^\/(embed|shorts|live)\/([^/?]+)/
-);
+        /^\/(embed|shorts|live)\/([^/?]+)/
+      );
 
       if (match) {
         return match[2];
@@ -1474,7 +1475,7 @@ return false;
 }
 function onYouTubeStateChange(event) {
   if (event.data === YT.PlayerState.PLAYING) {
-        if (timerSecondsLeft > 0 && !timerRunning) {
+    if (timerSecondsLeft > 0 && !timerRunning) {
       timerRunning = true;
 
       $('btn-timer-start').style.display = 'none';
@@ -1534,59 +1535,10 @@ function onYouTubeStateChange(event) {
     }
   }
 }
-
-function stopModulePlayback() {
-  clearInterval(timerInterval);
-  timerInterval = null;
-  timerRunning = false;
-
-  const pauseButton = document.getElementById("btn-timer-pause");
-  const startButton = document.getElementById("btn-timer-start");
-
-  if (pauseButton) {
-    pauseButton.style.display = "none";
-  }
-
-  if (startButton) {
-    startButton.style.display = "inline-block";
-  }
-
-  if (
-    youtubePlayer &&
-    typeof youtubePlayer.pauseVideo === "function"
-  ) {
-    youtubePlayer.pauseVideo();
-  }
-}
-
 function createYouTubePlayer(videoId, startSeconds) {
-  const frame = $('youtube-player-frame');
+  const container = $('youtube-player');
 
-  if (!videoId || !frame) return;
-
-  // The YouTube API replaces #youtube-player with an iframe.
-  // Make sure a fresh target div exists before creating the player.
-  let container = $('youtube-player');
-
-  if (!container || container.tagName === 'IFRAME') {
-    if (container) {
-      container.remove();
-    }
-
-    container = document.createElement('div');
-    container.id = 'youtube-player';
-    frame.appendChild(container);
-  }
-
-      // Wait until the responsive video frame is actually visible.
-  const rect = frame.getBoundingClientRect();
-
-  if (rect.width <= 0 || rect.height <= 0) {
-    requestAnimationFrame(() => {
-      createYouTubePlayer(videoId, startSeconds);
-    });
-    return;
-  }
+  if (!videoId) return;
 
   // If the YouTube API is not ready yet, wait for it.
   if (!youtubeAPIReady || typeof YT === 'undefined' || !YT.Player) {
@@ -1603,28 +1555,17 @@ function createYouTubePlayer(videoId, startSeconds) {
 
   container.innerHTML = '';
 
- youtubePlayer = new YT.Player('youtube-player', {
+  youtubePlayer = new YT.Player('youtube-player', {
     videoId: videoId,
 
     playerVars: {
       autoplay: 0,
       controls: 1,
-      start: startSeconds,
-      enablejsapi: 1,
-      playsinline: 1,
-      modestbranding: 1,
-      rel: 0,
-      fs: 1,
-      iv_load_policy: 3,
-      origin: window.location.origin
+      start: startSeconds
     },
 
     events: {
-      onStateChange: onYouTubeStateChange,
-
-      onError: function (event) {
-        console.error('YouTube player error:', event.data);
-      }
+      onStateChange: onYouTubeStateChange
     }
   });
 }
@@ -1667,11 +1608,18 @@ if (youtubePlayer) {
 }
 
 const videoId = extractYouTubeId(course.source);
+const playerContainer = $('youtube-player');
 
-const playerFrame = $('youtube-player-frame');
-
-if (playerFrame) {
-  playerFrame.innerHTML = '<div id="youtube-player"></div>';
+if (!videoId) {
+  playerContainer.innerHTML = '<div class="video-missing">⚠️ No playable video found. Paste a direct video link (open the video, copy the URL from the address bar) — not a playlist link.</div>';
+} else if (!youtubeAPIReady) {
+  playerContainer.innerHTML = '<div class="video-missing">Loading player…</div>';
+  pendingYouTubeRequest = {
+    videoId,
+    startSeconds: videoStartSeconds
+  };
+} else {
+  createYouTubePlayer(videoId, videoStartSeconds);
 }
 
   youtubeMaxWatchedSeconds = videoStartSeconds;
@@ -1692,31 +1640,10 @@ if (playerFrame) {
   const extraNoteEl = document.querySelector('#view-module .extra-note');
   if (extraNoteEl) extraNoteEl.style.display = 'block';
 
-    showView('module');
-
-  requestAnimationFrame(() => {
-    const playerContainer = $('youtube-player');
-
-    if (!playerContainer) return;
-
-    if (!videoId) {
-      playerContainer.innerHTML =
-        '<div class="video-missing">⚠️ No playable video found. Paste a direct video link (open the video, copy the URL from the address bar) — not a playlist link.</div>';
-    } else if (!youtubeAPIReady) {
-      playerContainer.innerHTML =
-        '<div class="video-missing">Loading player…</div>';
-
-      pendingYouTubeRequest = {
-        videoId,
-        startSeconds: videoStartSeconds
-      };
-    } else {
-      createYouTubePlayer(videoId, videoStartSeconds);
-    }
-  });
+  showView('module');
 }
 
- // Opens a COMPLETED module or sub-module again, purely to rewatch it.
+// Opens a COMPLETED module or sub-module again, purely to rewatch it.
 // Doesn't touch progress, XP, or the resume-within-24h state — it's
 // just a video player pointed at that unit's own start/end range.
 function openModuleForReview(moduleId, subModuleId) {
@@ -1740,12 +1667,17 @@ function openModuleForReview(moduleId, subModuleId) {
   }
 
   const videoId = extractYouTubeId(course.source);
-  const playerFrame = $('youtube-player-frame');
+  const playerContainer = $('youtube-player');
   const unitStartSeconds = timeToSeconds(unit.startTime);
   const unitEndSeconds = timeToSeconds(unit.endTime);
 
-  if (playerFrame) {
-    playerFrame.innerHTML = '<div id="youtube-player"></div>';
+  if (!videoId) {
+    playerContainer.innerHTML = '<div class="video-missing">⚠️ No playable video found.</div>';
+  } else if (!youtubeAPIReady) {
+    playerContainer.innerHTML = '<div class="video-missing">Loading player…</div>';
+    pendingYouTubeRequest = { videoId, startSeconds: unitStartSeconds };
+  } else {
+    createYouTubePlayer(videoId, unitStartSeconds);
   }
 
   timerTotalSeconds = unitEndSeconds - unitStartSeconds;
@@ -1767,31 +1699,10 @@ function openModuleForReview(moduleId, subModuleId) {
   $('btn-timer-start').textContent = '▶ Play';
   $('btn-timer-pause').style.display = 'none';
   $('btn-complete-module').style.display = 'none';
-    const extraNoteEl = document.querySelector('#view-module .extra-note');
-  if (extraNoteEl) extraNoteEl.style.display = 'block';
+  const extraNoteEl = document.querySelector('#view-module .extra-note');
+  if (extraNoteEl) extraNoteEl.style.display = 'none';
 
   showView('module');
-
-  requestAnimationFrame(() => {
-    const playerContainer = $('youtube-player');
-
-    if (!playerContainer) return;
-
-    if (!videoId) {
-      playerContainer.innerHTML =
-        '<div class="video-missing">⚠️ No playable video found. Paste a direct video link (open the video, copy the URL from the address bar) — not a playlist link.</div>';
-    } else if (!youtubeAPIReady) {
-      playerContainer.innerHTML =
-        '<div class="video-missing">Loading player…</div>';
-
-      pendingYouTubeRequest = {
-        videoId,
-        startSeconds: unitStartSeconds
-      };
-    } else {
-      createYouTubePlayer(videoId, unitStartSeconds);
-    }
-  });
 }
 
 function updateTimerDisplay() {
@@ -2202,17 +2113,3 @@ async function loadFriends() {
     list.innerHTML = '<p>Could not load friends.</p>';
   }
 }
-document
-  .getElementById("btn-back-to-plan")
-  ?.addEventListener("click", function (event) {
-    event.preventDefault();
-
-    stopModulePlayback();
-
-    activeModuleId = null;
-    activeSubModuleId = null;
-    reviewMode = false;
-
-    renderPath();
-    showView("path");
-  });
