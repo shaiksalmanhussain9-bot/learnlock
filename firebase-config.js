@@ -17,8 +17,7 @@
    -----------------------------------
    1. On your new project's home page, click the "</>" (web) icon
    2. Give the app a nickname, e.g. "learnlock-web"
-   3. You do NOT need Firebase Hosting checked at this step (we'll
-      cover free hosting separately below)
+   3. You do NOT need Firebase Hosting checked at this step
    4. Click "Register app"
    5. Firebase will show you a `firebaseConfig` object — copy it
 
@@ -36,12 +35,15 @@
    -----------------------------------
    1. In the Firebase console, go to Build → Firestore Database
    2. Click "Create database"
-   3. Choose "Start in production mode" → pick any location close to you
-   4. Once created, go to the "Rules" tab and replace the rules with:
+   3. Choose "Production mode" → pick location close to you
+   4. Once created, go to the "Rules" tab and replace with:
 
       rules_version = '2';
       service cloud.firestore {
         match /databases/{database}/documents {
+          match /{document=**} {
+            allow read, write: if request.auth != null;
+          }
           match /users/{userId} {
             allow read, write: if request.auth != null && request.auth.uid == userId;
             match /{document=**} {
@@ -53,10 +55,10 @@
 
    5. Click "Publish"
 
-   That's it — everything below this line is code, not something
-   you need to edit except the config object.
+   That's it — everything below this line is code.
 =========================================================== */
 
+// Firebase Config (compat SDK format — matches the scripts in index.html)
 const firebaseConfig = {
   apiKey: "AIzaSyDNGJxOjVNLoRhN_T2RoFz1f6P0lJNcL7s",
   authDomain: "learnlock-7e9e8.firebaseapp.com",
@@ -66,10 +68,14 @@ const firebaseConfig = {
   appId: "1:1031249123529:web:9a94178b530f7d65b55518"
 };
 
+// Initialize Firebase (compat format)
 firebase.initializeApp(firebaseConfig);
 
+// Get references to auth and firestore
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+// Configure Firestore
 db.settings({
   experimentalAutoDetectLongPolling: true,
   merge: true
