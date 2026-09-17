@@ -4,7 +4,7 @@
    explain what each part does, since you're new to coding.
 =========================================================== */
 
-const MAX_ACTIVE_COURSES = 3;
+const MAX_ACTIVE_COURSES = 3; 
 const POINTS_PER_MODULE = 50;
 const STREAK_RECOVERY_COST = 4000;
 
