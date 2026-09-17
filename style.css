@@ -845,7 +845,13 @@ a:focus-visible {
     margin: 0 0 8px;
   }
   .friend-add-row { flex-direction: column; }
-  .friend-add-row .btn-primary { width: 100%; }
+    .friend-add-row .btn-primary { width: 100%; }
+
+  .youtube-player-wrap {
+    max-width: 70%;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 /* ---------- Level banner ---------- */
@@ -1116,12 +1122,7 @@ a:focus-visible {
   height: 100% !important;
   border: none;
 }
-  /* Shrink the video on small screens so more fits without scrolling */
-  .youtube-player-wrap {
-    max-width: 90%;
-    margin-left: auto;
-    margin-right: auto;
-  }
+
 /* ============ COURSE PATH VIEW ============ */
 .view-path {
   background: linear-gradient(135deg, #1a1f3a 0%, #0f1419 100%);
