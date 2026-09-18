@@ -1285,3 +1285,13 @@ a:focus-visible {
     font-size: 13px;
   }
 }
+
+/* ============ CALENDAR CONTAINER ============ */
+
+#streak-calendar {
+  width: 100%;
+  margin-top: 24px;
+  margin-bottom: 40px;
+}
+
+/* ============ SUMMARY STATS ROW ============ */
