@@ -1869,7 +1869,6 @@ $('btn-complete-module').addEventListener('click', async () => {
   }
 
    // Track the learning session for the calendar
-const mod = course.modules.find(m => m.id === activeModuleId);
 const unit = activeSubModuleId 
   ? (mod.subModules || []).find(s => s.id === activeSubModuleId) 
   : mod;
