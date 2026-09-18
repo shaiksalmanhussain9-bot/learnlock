@@ -345,6 +345,7 @@ async function loadUserStats() {
     if (userStats.rewards === undefined) userStats.rewards = [];
     if (userStats.streakMilestones === undefined) userStats.streakMilestones = [];
     if (userStats.activeDates === undefined) userStats.activeDates = [];
+     if (userStats.learningSessions === undefined) userStats.learningSessions = [];
     // Old field from the previous lock-based system — no longer used,
     // but harmless to leave if it exists on old accounts.
     delete userStats.missedDay;
@@ -569,46 +570,6 @@ function renderLevelBanner() {
   `;
 }
 
-// Renders a GitHub-style grid of the last several weeks — one filled
-// square for every day the user completed at least one module.
-function renderStreakCalendar() {
-  const container = $('streak-calendar');
-  if (!container) return;
-
-  const WEEKS_TO_SHOW = 12;
-  const activeDates = new Set(userStats.activeDates || []);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayDow = today.getDay(); // 0 = Sunday
-
-  // Start of THIS week (the Sunday on or before today).
-  const currentWeekStart = new Date(today);
-  currentWeekStart.setDate(today.getDate() - todayDow);
-
-  // Start of the whole grid: (WEEKS_TO_SHOW - 1) weeks before that,
-  // so the grid always has exactly WEEKS_TO_SHOW columns and the
-  // LAST column is always the current week.
-  const gridStart = new Date(currentWeekStart);
-  gridStart.setDate(currentWeekStart.getDate() - (WEEKS_TO_SHOW - 1) * 7);
-
-  let html = '<div class="streak-cal-grid">';
-  for (let col = 0; col < WEEKS_TO_SHOW; col++) {
-    html += '<div class="streak-cal-col">';
-    for (let row = 0; row < 7; row++) {
-      const d = new Date(gridStart);
-      d.setDate(gridStart.getDate() + col * 7 + row);
-      const dateStr = toLocalDateStr(d);
-      const isFuture = d > today;
-      const active = activeDates.has(dateStr);
-      const cls = isFuture ? '' : (active ? 'cal-active' : 'cal-inactive');
-      html += `<div class="streak-cal-cell ${cls}" title="${dateStr}${active ? ' — learned!' : ''}"></div>`;
-    }
-    html += '</div>';
-  }
-  html += '</div>';
-  container.innerHTML = html;
-}
 // ===========================================================
 // COURSES
 // ===========================================================
@@ -1082,7 +1043,7 @@ function renderDashboard() {
   renderContinueLearningCard();
   renderLevelBanner();
   renderStreakMilestones();
-  renderStreakCalendar();
+  renderLearningProgressCalendar();
   renderIncomingCourseInvites();
   renderOutgoingCourseInvites();
   renderSharedCourses();
@@ -1906,6 +1867,28 @@ $('btn-complete-module').addEventListener('click', async () => {
   if (!userStats.activeDates.includes(todayForCalendar)) {
     userStats.activeDates.push(todayForCalendar);
   }
+
+   // Track the learning session for the calendar
+const course = getActiveCourse();
+const mod = course.modules.find(m => m.id === activeModuleId);
+const unit = activeSubModuleId 
+  ? (mod.subModules || []).find(s => s.id === activeSubModuleId) 
+  : mod;
+
+if (unit) {
+  const unitStartSeconds = timeToSeconds(unit.startTime);
+  const unitEndSeconds = timeToSeconds(unit.endTime);
+  const sessionMinutes = Math.round((unitEndSeconds - unitStartSeconds) / 60);
+  
+  recordLearningSession(
+    todayForCalendar,
+    activeCourseId,
+    course.name,
+    activeModuleId,
+    unit.name,
+    sessionMinutes
+  );
+}
 
   const newMilestones = checkStreakMilestones();
   if (courseJustCompleted && activeCourseType === 'personal') userStats.coursesCompleted += 1;
