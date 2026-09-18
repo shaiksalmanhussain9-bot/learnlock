@@ -1475,6 +1475,16 @@ youtubeMaxWatchedSeconds = Math.max(
 
 return false;
 }
+
+function onYouTubeStateChange(event) {
+  // Auto-skip ads
+  if (event.data === YT.PlayerState.UNSTARTED) {
+    try {
+      const skipBtn = document.querySelector('.ytp-ad-skip-button');
+      if (skipBtn) skipBtn.click();
+    } catch (e) {}
+  }
+
 function onYouTubeStateChange(event) {
   if (event.data === YT.PlayerState.PLAYING) {
     if (timerSecondsLeft > 0 && !timerRunning) {
@@ -1542,16 +1552,9 @@ function createYouTubePlayer(videoId, startSeconds) {
 
   if (!videoId) return;
 
-  // If the YouTube API is not ready yet, wait for it.
   if (!youtubeAPIReady || typeof YT === 'undefined' || !YT.Player) {
-    pendingYouTubeRequest = {
-      videoId,
-      startSeconds
-    };
-
-    container.innerHTML =
-      '<div class="video-missing">Loading player…</div>';
-
+    pendingYouTubeRequest = { videoId, startSeconds };
+    container.innerHTML = '<div class="video-missing">Loading player…</div>';
     return;
   }
 
@@ -1559,19 +1562,44 @@ function createYouTubePlayer(videoId, startSeconds) {
 
   youtubePlayer = new YT.Player('youtube-player', {
     videoId: videoId,
-
     playerVars: {
       autoplay: 0,
       controls: 1,
-      start: startSeconds
+      start: startSeconds,
+      modestbranding: 1,
+      rel: 0  // ← Disables related videos
     },
-
     events: {
-      onStateChange: onYouTubeStateChange
+      onStateChange: onYouTubeStateChange,
+      onReady: onPlayerReady
     }
   });
 }
 
+// New function to handle ads
+function onPlayerReady(event) {
+  const player = event.target;
+  
+  // Auto-skip ads when they start
+  const skipAdsInterval = setInterval(() => {
+    try {
+      if (player.getVideoData().video_id) {
+        // Ad is playing, try to skip
+        const skipButton = document.querySelector('.ytp-ad-skip-button') || 
+                          document.querySelector('button.ytp-ad-skip-button-modern');
+        if (skipButton) {
+          skipButton.click();
+          clearInterval(skipAdsInterval);
+        }
+      }
+    } catch (e) {
+      // Silent fail - player might not have getVideoData yet
+    }
+  }, 500);
+
+  // Stop checking after 15 seconds
+  setTimeout(() => clearInterval(skipAdsInterval), 15000);
+}
 function openModule(moduleId) {
   reviewMode = false;
   activeModuleId = moduleId;
