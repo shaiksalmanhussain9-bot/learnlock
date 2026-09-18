@@ -1115,6 +1115,7 @@ document.querySelectorAll('[data-nav]').forEach(btn => {
   btn.addEventListener('click', () => {
     showView(btn.dataset.nav);
     if (btn.dataset.nav === 'dashboard') renderDashboard();
+    if (btn.dataset.nav === 'path') renderPath();
   });
 });
 
@@ -1341,6 +1342,13 @@ function getActiveUnit(course) {
     return (mod.subModules || []).find(s => s.id === activeSubModuleId) || mod;
   }
   return mod;
+}
+
+function openCoursePath(courseId) {
+  activeCourseId = courseId;
+  activeCourseType = 'personal';
+  renderPath();
+  showView('path');
 }
 
 function renderPath() {
