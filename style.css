@@ -15,11 +15,21 @@
   --surface-raised: #17243A;
   --line: #24344D;
   --locked: #3A475D;
+
   --gold: #F5B942;
   --gold-dim: #7A6330;
+
+  --primary: #4FD1B5;
+  --primary-dark: #35BFA5;
+
+  --success: #34D399;
   --ember: #F87171;
+
+  --purple: #8B8CF6;
+
   --text: #F1F5F9;
   --text-muted: #94A3B8;
+
   --radius: 10px;
   --serif: 'Fraunces', Georgia, serif;
   --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -49,11 +59,11 @@ button {
 button:focus-visible,
 input:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--gold);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
-::selection { background: var(--gold-dim); color: var(--text); }
+::selection { background: var(--primary-dark); color: var(--text); }
 
 /* ---------- Layout shell ---------- */
 
