@@ -2137,3 +2137,390 @@ async function loadFriends() {
     list.innerHTML = '<p>Could not load friends.</p>';
   }
 }
+/* ============================================================
+   LEARNLOCK — Learning Progress Calendar Module
+=========================================================== */
+
+// Helper: Create a learning session record when a module is completed
+function createLearningSession(date, courseId, courseTitle, moduleId, moduleTitle, minutes, xpEarned = 50) {
+  return {
+    date,
+    courseId,
+    courseTitle,
+    moduleId,
+    moduleTitle,
+    minutes,
+    completed: true,
+    xpEarned
+  };
+}
+
+// Helper: Add a session to the learning history
+function recordLearningSession(date, courseId, courseTitle, moduleId, moduleTitle, minutes) {
+  if (!userStats.learningSessions) userStats.learningSessions = [];
+  const session = createLearningSession(date, courseId, courseTitle, moduleId, moduleTitle, minutes);
+  userStats.learningSessions.push(session);
+}
+
+// Helper: Get all sessions for a specific date
+function getSessionsForDate(dateStr) {
+  if (!userStats.learningSessions) return [];
+  return userStats.learningSessions.filter(s => s.date === dateStr);
+}
+
+// Helper: Get total minutes learned on a date
+function getTotalMinutesForDate(dateStr) {
+  const sessions = getSessionsForDate(dateStr);
+  return sessions.reduce((total, s) => total + (s.minutes || 0), 0);
+}
+
+// Helper: Get total minutes for a week (starting Sunday)
+function getTotalMinutesForWeek(weekStartDate) {
+  let total = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStartDate);
+    d.setDate(d.getDate() + i);
+    const dateStr = toLocalDateStr(d);
+    total += getTotalMinutesForDate(dateStr);
+  }
+  return total;
+}
+
+// Helper: Get total minutes for a month
+function getTotalMinutesForMonth(year, month) {
+  if (!userStats.learningSessions) return 0;
+  return userStats.learningSessions
+    .filter(s => {
+      const [y, m] = s.date.split('-').slice(0, 2);
+      return parseInt(y) === year && parseInt(m) === month;
+    })
+    .reduce((total, s) => total + (s.minutes || 0), 0);
+}
+
+// Helper: Format minutes as "1h 12m" or "45m"
+function formatMinutes(totalMinutes) {
+  if (totalMinutes === 0) return '0m';
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hours === 0) return `${mins}m`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
+}
+
+// Helper: Get days learned and missed for the month
+function getMonthStats(year, month) {
+  const lastDay = new Date(year, month, 0).getDate();
+  let daysLearned = 0;
+  let daysMissed = 0;
+
+  for (let day = 1; day <= lastDay; day++) {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const minutes = getTotalMinutesForDate(dateStr);
+    if (minutes > 0) {
+      daysLearned++;
+    } else {
+      const d = new Date(dateStr);
+      if (d <= new Date()) {
+        daysMissed++;
+      }
+    }
+  }
+
+  return { daysLearned, daysMissed };
+}
+
+// ============================================================
+// NEW CALENDAR RENDERING
+// ============================================================
+
+// Calendar mode: 'month' or 'week'
+let calendarMode = 'month';
+let calendarDate = new Date(); // which month/week to display
+
+// Render the complete Learning Progress Calendar
+function renderLearningProgressCalendar() {
+  const container = $('learning-calendar');
+  if (!container) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth() + 1;
+
+  // Get stats for the month
+  const stats = getMonthStats(year, month);
+  const totalMinutes = getTotalMinutesForMonth(year, month);
+  const totalDays = new Date(year, month, 0).getDate();
+  const avgMinutesPerLearningDay = stats.daysLearned > 0 ? Math.round(totalMinutes / stats.daysLearned) : 0;
+
+  // Summary section
+  const summaryHtml = `
+    <div class="calendar-summary">
+      <div class="summary-item">
+        <div class="summary-label">Days learned</div>
+        <div class="summary-value">${stats.daysLearned}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Days missed</div>
+        <div class="summary-value">${stats.daysMissed}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Total time</div>
+        <div class="summary-value">${formatMinutes(totalMinutes)}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Avg per day</div>
+        <div class="summary-value">${formatMinutes(avgMinutesPerLearningDay)}</div>
+      </div>
+    </div>
+  `;
+
+  // Controls (Month/Week toggle, Prev/Next)
+  const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+  const controlsHtml = `
+    <div class="calendar-controls">
+      <button class="btn-calendar-nav" id="btn-cal-prev">← Prev</button>
+      <div class="calendar-month-display">${monthName}</div>
+      <button class="btn-calendar-nav" id="btn-cal-next">Next →</button>
+    </div>
+    <div class="calendar-mode-toggle">
+      <button class="btn-cal-mode ${calendarMode === 'month' ? 'active' : ''}" data-mode="month">📅 Month</button>
+      <button class="btn-cal-mode ${calendarMode === 'week' ? 'active' : ''}" data-mode="week">📊 Week</button>
+    </div>
+  `;
+
+  // Calendar grid (for month view)
+  let calendarGridHtml = '';
+  if (calendarMode === 'month') {
+    calendarGridHtml = renderMonthGrid(year, month);
+  } else {
+    calendarGridHtml = renderWeekView(year, month);
+  }
+
+  container.innerHTML = summaryHtml + controlsHtml + calendarGridHtml;
+
+  // Attach event listeners
+  $('btn-cal-prev')?.addEventListener('click', () => {
+    calendarDate.setMonth(calendarDate.getMonth() - 1);
+    renderLearningProgressCalendar();
+  });
+
+  $('btn-cal-next')?.addEventListener('click', () => {
+    calendarDate.setMonth(calendarDate.getMonth() + 1);
+    renderLearningProgressCalendar();
+  });
+
+  document.querySelectorAll('.btn-cal-mode').forEach(btn => {
+    btn.addEventListener('click', () => {
+      calendarMode = btn.dataset.mode;
+      renderLearningProgressCalendar();
+    });
+  });
+
+  // Attach date click handlers
+  document.querySelectorAll('.calendar-day').forEach(el => {
+    el.addEventListener('click', () => {
+      const dateStr = el.dataset.date;
+      showDateDetailsModal(dateStr);
+    });
+  });
+}
+
+// Render a month's grid of dates
+function renderMonthGrid(year, month) {
+  const firstDay = new Date(year, month - 1, 1).getDay(); // 0 = Sunday
+  const lastDay = new Date(year, month, 0).getDate();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let html = '<div class="calendar-grid">';
+  
+  // Day headers
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  dayNames.forEach(name => {
+    html += `<div class="calendar-day-header">${name}</div>`;
+  });
+
+  // Empty cells before first day
+  for (let i = 0; i < firstDay; i++) {
+    html += '<div class="calendar-day empty"></div>';
+  }
+
+  // Days of month
+  for (let day = 1; day <= lastDay; day++) {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dateObj = new Date(dateStr);
+    const minutes = getTotalMinutesForDate(dateStr);
+    const isFuture = dateObj > today;
+    const isToday = toLocalDateStr(today) === dateStr;
+    const hasActivity = minutes > 0;
+
+    const classes = [
+      'calendar-day',
+      isFuture ? 'future' : '',
+      isToday ? 'today' : '',
+      hasActivity ? 'active' : 'inactive'
+    ].filter(Boolean).join(' ');
+
+    const timeText = minutes > 0 ? formatMinutes(minutes) : (isFuture ? '' : 'Missed');
+    const progressPct = Math.min(minutes / 60 * 100, 100); // assume 1h = full progress
+
+    html += `
+      <div class="calendar-day ${classes}" data-date="${dateStr}" title="${dateStr}">
+        <div class="day-number">${day}</div>
+        <div class="day-time">${timeText}</div>
+        <div class="day-progress-bar">
+          <div class="day-progress-fill" style="width: ${progressPct}%"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  html += '</div>';
+  return html;
+}
+
+// Render weekly breakdown view
+function renderWeekView(year, month) {
+  const today = new Date();
+  const weeks = [];
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+
+  // Generate all weeks in month
+  let currentDate = new Date(firstDay);
+  currentDate.setDate(currentDate.getDate() - currentDate.getDay()); // Start from Sunday
+
+  while (currentDate < lastDay) {
+    const weekStart = new Date(currentDate);
+    const weekEnd = new Date(currentDate);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+
+    weeks.push({
+      start: weekStart,
+      end: weekEnd
+    });
+
+    currentDate.setDate(currentDate.getDate() + 7);
+  }
+
+  let html = '<div class="calendar-weeks">';
+
+  weeks.forEach(week => {
+    const dayBreakdown = [];
+    let weekTotal = 0;
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(week.start);
+      d.setDate(d.getDate() + i);
+      const dateStr = toLocalDateStr(d);
+      const minutes = getTotalMinutesForDate(dateStr);
+      dayBreakdown.push({
+        day: d.toLocaleString('default', { weekday: 'short' }).substring(0, 3),
+        minutes,
+        dateStr
+      });
+      weekTotal += minutes;
+    }
+
+    html += `
+      <div class="week-card">
+        <div class="week-header">
+          <span class="week-range">${dayBreakdown[0].day} - ${dayBreakdown[6].day}</span>
+          <span class="week-total">${formatMinutes(weekTotal)}</span>
+        </div>
+        <div class="week-bars">
+          ${dayBreakdown.map((d, i) => `
+            <div class="week-bar-item">
+              <div class="week-bar-day">${d.day}</div>
+              <div class="week-bar" style="height: ${Math.min(d.minutes / 60 * 100, 100)}%;" 
+                   title="${d.dateStr}: ${formatMinutes(d.minutes)}"></div>
+              <div class="week-bar-time">${formatMinutes(d.minutes)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div>';
+  return html;
+}
+
+// Show modal with details for a clicked date
+function showDateDetailsModal(dateStr) {
+  const sessions = getSessionsForDate(dateStr);
+  const totalMinutes = getTotalMinutesForDate(dateStr);
+
+  let html = `
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">${dateStr}</div>
+          <button class="modal-close" id="btn-close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-summary">
+            <div class="modal-stat">
+              <span class="modal-label">Total time</span>
+              <span class="modal-value">${formatMinutes(totalMinutes)}</span>
+            </div>
+            <div class="modal-stat">
+              <span class="modal-label">Sessions</span>
+              <span class="modal-value">${sessions.length}</span>
+            </div>
+          </div>
+  `;
+
+  if (sessions.length === 0) {
+    html += '<div class="no-sessions">No learning recorded for this date.</div>';
+  } else {
+    html += '<div class="sessions-list">';
+    sessions.forEach(s => {
+      html += `
+        <div class="session-item">
+          <div class="session-course">${escapeHtml(s.courseTitle)}</div>
+          <div class="session-module">${escapeHtml(s.moduleTitle)}</div>
+          <div class="session-time-xp">
+            <span>⏱️ ${formatMinutes(s.minutes)}</span>
+            <span>✨ +${s.xpEarned} XP</span>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+
+  html += `
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Show modal
+  const modal = document.createElement('div');
+  modal.innerHTML = html;
+  document.body.appendChild(modal);
+
+  const overlay = $('modal-overlay');
+  $('btn-close-modal').addEventListener('click', () => {
+    modal.remove();
+  });
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      modal.remove();
+    }
+  });
+}
+
+// ============================================================
+// INITIALIZE CALENDAR
+// ============================================================
+
+// Call this in your loadAndShowDashboard() or renderDashboard()
+function initLearningCalendar() {
+  calendarDate = new Date();
+  calendarMode = 'month';
+  renderLearningProgressCalendar();
+}
