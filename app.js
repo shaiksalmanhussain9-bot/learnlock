@@ -2215,13 +2215,13 @@ function getMonthStats(year, month) {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const minutes = getTotalMinutesForDate(dateStr);
     if (minutes > 0) {
-      daysLearned++;
-    } else {
-      const d = new Date(dateStr);
-      if (d <= new Date()) {
-        daysMissed++;
-      }
-    }
+  daysLearned++;
+} else {
+  const d = new Date(dateStr);
+  if (d < new Date()) {  
+    daysMissed++;
+  }
+}
   }
 
   return { daysLearned, daysMissed };
@@ -2360,7 +2360,7 @@ function renderMonthGrid(year, month) {
       hasActivity ? 'active' : 'inactive'
     ].filter(Boolean).join(' ');
 
-    const timeText = minutes > 0 ? formatMinutes(minutes) : (isFuture ? '' : 'Missed');
+    const timeText = minutes > 0 ? formatMinutes(minutes) : (isFuture || isToday ? '' : 'Missed');
     const progressPct = Math.min(minutes / 60 * 100, 100); // assume 1h = full progress
 
     html += `
