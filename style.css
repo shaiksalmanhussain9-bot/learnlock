@@ -16,7 +16,7 @@
   --line: #24344D;
   --locked: #3A475D;
 
-  --gold: #F5B942;
+  --gold: #4FD1B5;
   --gold-dim: #7A6330;
 
   --primary: #4FD1B5;
@@ -89,7 +89,7 @@ a:focus-visible {
   letter-spacing: 0.2px;
 }
 
-.brand .lock-mark { color: var(--gold); }
+.brand .lock-mark { color: #4FD1B5; }
 
 .topbar-right {
   display: flex;
@@ -130,7 +130,7 @@ a:focus-visible {
   margin: 0 0 8px;
 }
 
-.auth-hero .lock-mark { color: var(--gold); }
+.auth-hero .lock-mark { color: #4FD1B5; }
 
 .auth-sub {
   color: var(--text-muted);
@@ -161,11 +161,11 @@ a:focus-visible {
   font-family: var(--sans);
 }
 
-.field input:focus { border-color: var(--gold); }
+.field input:focus { border-color: #4FD1B5; }
 
 .btn-primary {
   width: 100%;
-  background: var(--gold);
+  background: #4FD1B5;
   color: #071A17;
   font-weight: 600;
   font-size: 15px;
@@ -200,7 +200,7 @@ a:focus-visible {
 
 .auth-toggle button {
   background: none;
-  color: var(--gold);
+  color: #4FD1B5;
   font-weight: 500;
   font-size: 14px;
   padding: 0;
@@ -241,7 +241,7 @@ a:focus-visible {
 }
 
 .stat-num.streak { color: var(--ember); }
-.stat-num.points { color: var(--gold); }
+.stat-num.points { color: #4FD1B5; }
 
 .stat-label {
   font-size: 12px;
@@ -280,7 +280,7 @@ a:focus-visible {
   cursor: pointer;
 }
 
-.course-item:hover .course-name { color: var(--gold); }
+.course-item:hover .course-name { color: #4FD1B5; }
 
 .course-info {
   flex: 1;
@@ -302,7 +302,7 @@ a:focus-visible {
 
 .course-progress-ring {
   font-size: 13px;
-  color: var(--gold);
+  color: #4FD1B5;
   font-weight: 600;
   white-space: nowrap;
   margin-left: 12px;
@@ -327,7 +327,7 @@ a:focus-visible {
   margin-top: 18px;
 }
 
-.btn-new-course:hover { border-color: var(--gold); color: var(--gold); }
+.btn-new-course:hover { border-color: #4FD1B5; color: #4FD1B5; }
 
 /* ---------- Course builder ---------- */
 
@@ -384,7 +384,7 @@ a:focus-visible {
   cursor: pointer;
 }
 
-.btn-add-submodule:hover { color: var(--gold); }
+.btn-add-submodule:hover { color: #4FD1B5; }
 
 .btn-add-module {
   background: none;
@@ -397,7 +397,7 @@ a:focus-visible {
   margin: 16px 0 24px;
 }
 
-.btn-add-module:hover { border-color: var(--gold); color: var(--gold); }
+.btn-add-module:hover { border-color: #4FD1B5; color: #4FD1B5; }
 
 /* ---------- Learning path (the day-by-day journey) ---------- */
 
@@ -442,14 +442,14 @@ a:focus-visible {
 }
 
 .path-node.completed .node-dot {
-  background: var(--gold);
-  border-color: var(--gold);
+  background: #4FD1B5;
+  border-color: #4FD1B5;
   color: #071A17;
 }
 
 .path-node.current .node-dot {
-  border-color: var(--gold);
-  color: var(--gold);
+  border-color: #4FD1B5;
+  color: #4FD1B5;
 }
 
 .node-card {
@@ -507,7 +507,7 @@ a:focus-visible {
 }
 
 .submodule-progress-item.available {
-  color: var(--gold);
+  color: #4FD1B5;
   font-weight: 600;
 }
 
@@ -531,12 +531,12 @@ a:focus-visible {
 }
 
 .btn-rewatch:hover {
-  border-color: var(--gold);
-  color: var(--gold);
+  border-color: #4FD1B5;
+  color: #4FD1B5;
 }
 
 .btn-start {
-  background: var(--gold);
+  background: #4FD1B5;
   color: #071A17;
   font-weight: 600;
   font-size: 13px;
@@ -577,7 +577,7 @@ a:focus-visible {
   margin-bottom: 6px;
 }
 
-.timer-display.done { color: var(--gold); }
+.timer-display.done { color: #4FD1B5; }
 
 .timer-label {
   font-size: 13px;
@@ -600,7 +600,7 @@ a:focus-visible {
 }
 
 .btn-timer-main {
-  background: var(--gold);
+  background: #4FD1B5;
   color: #071A17;
 }
 
@@ -611,7 +611,7 @@ a:focus-visible {
 }
 
 .btn-complete {
-  background: var(--gold);
+  background: #4FD1B5;
   color: #071A17;
   font-weight: 700;
   font-size: 16px;
@@ -702,7 +702,7 @@ a:focus-visible {
   color: var(--text-muted);
 }
 
-.badge.earned .badge-state { color: var(--gold); }
+.badge.earned .badge-state { color: #4FD1B5; }
 .badge.in-progress .badge-state { color: var(--ember); }
 
 /* ---------- Continue Learning card ---------- */
@@ -717,7 +717,7 @@ a:focus-visible {
 
 .continue-card-label {
   font-size: 12px;
-  color: var(--gold);
+  color: #4FD1B5;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
@@ -755,7 +755,7 @@ a:focus-visible {
 }
 
 .course-progress-bar-fill {
-  background: var(--gold);
+  background: #4FD1B5;
   height: 100%;
 }
 
@@ -774,7 +774,7 @@ a:focus-visible {
 .setup-note {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--gold);
+  border-left: 3px solid #4FD1B5;
   padding: 14px 16px;
   border-radius: 8px;
   font-size: 13px;
@@ -890,7 +890,7 @@ a:focus-visible {
 }
 
 .level-xp-fill {
-  background: var(--gold);
+  background: #4FD1B5;
   height: 100%;
 }
 
@@ -928,7 +928,7 @@ a:focus-visible {
 }
 
 .streak-cal-cell.cal-active {
-  background: var(--gold);
+  background: #4FD1B5;
 }
 
 /* ---------- Friends ---------- */
@@ -975,7 +975,7 @@ a:focus-visible {
   font-family: var(--sans);
 }
 
-.friend-add-row input:focus { border-color: var(--gold); }
+.friend-add-row input:focus { border-color: #4FD1B5; }
 
 .friend-add-row .btn-primary {
   width: auto;
@@ -1092,8 +1092,8 @@ a:focus-visible {
 }
 
 .friend-email-share:hover {
-  border-color: var(--gold);
-  color: var(--gold);
+  border-color: #4FD1B5;
+  color: #4FD1B5;
 }
 
 .cancel-share {
@@ -1177,7 +1177,7 @@ a:focus-visible {
 }
 
 .path-module:hover {
-  border-color: #F5B942;
+  border-color: #4FD1B5;
   background: #1B2C45;
   transform: translateX(4px);
 }
@@ -1188,9 +1188,9 @@ a:focus-visible {
 }
 
 .path-module.active {
-  border-color: #F5B942;
-  background: rgba(255, 159, 28, 0.05);
-  box-shadow: 0 0 20px rgba(255, 159, 28, 0.2);
+  border-color: #4FD1B5;
+  background: rgba(79, 209, 181, 0.05);
+  box-shadow: 0 0 20px rgba(79, 209, 181, 0.2);
 }
 
 .path-module.locked {
@@ -1210,8 +1210,8 @@ a:focus-visible {
 .path-day {
   font-size: 14px;
   font-weight: bold;
-  color: #F5B942;
-  background: rgba(255, 159, 28, 0.1);
+  color: #4FD1B5;
+  background: rgba(79, 209, 181, 0.1);
   padding: 4px 12px;
   border-radius: 20px;
 }
@@ -1227,7 +1227,7 @@ a:focus-visible {
 }
 
 .path-module.active .path-status {
-  color: #F5B942;
+  color: #4FD1B5;
 }
 
 .path-module.locked .path-status {
@@ -1270,12 +1270,12 @@ a:focus-visible {
 }
 
 .btn-continue-module {
-  background: #F5B942;
+  background: #4FD1B5;
   color: #000;
 }
 
 .btn-continue-module:hover {
-  background: #FFD166;
+  background: #35BFA5;
   transform: scale(1.02);
 }
 
@@ -1332,7 +1332,7 @@ a:focus-visible {
 .summary-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--gold);
+  color: #4FD1B5;
 }
 
 /* Controls */
@@ -1357,7 +1357,7 @@ a:focus-visible {
 
 .btn-calendar-nav:hover {
   background: var(--surface-raised);
-  border-color: var(--gold);
+  border-color: #4FD1B5;
 }
 
 .calendar-month-display {
@@ -1387,13 +1387,13 @@ a:focus-visible {
 
 .btn-cal-mode:hover {
   background: var(--surface-raised);
-  border-color: var(--gold);
+  border-color: #4FD1B5;
 }
 
 .btn-cal-mode.active {
-  background: var(--gold);
+  background: #4FD1B5;
   color: #071A17;
-  border-color: var(--gold);
+  border-color: #4FD1B5;
   font-weight: 600;
 }
 
@@ -1438,18 +1438,18 @@ a:focus-visible {
 }
 
 .calendar-day.today {
-  border: 2px solid var(--gold);
+  border: 2px solid #4FD1B5;
   font-weight: 600;
 }
 
 .calendar-day.active {
-  background: rgba(232, 163, 61, 0.1);
-  border-color: var(--gold);
+  background: rgba(79, 209, 181, 0.1);
+  border-color: #4FD1B5;
 }
 
 .calendar-day:not(.empty):not(.future):hover {
   background: var(--surface-raised);
-  border-color: var(--gold);
+  border-color: #4FD1B5;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
@@ -1462,7 +1462,7 @@ a:focus-visible {
 
 .day-time {
   font-size: 0.8rem;
-  color: var(--gold);
+  color: #4FD1B5;
   margin-top: 4px;
   font-weight: 500;
 }
@@ -1477,7 +1477,7 @@ a:focus-visible {
 
 .day-progress-fill {
   height: 100%;
-  background: var(--gold);
+  background: #4FD1B5;
   transition: width 0.3s;
 }
 
@@ -1508,7 +1508,7 @@ a:focus-visible {
 }
 
 .week-total {
-  color: var(--gold);
+  color: #4FD1B5;
   font-weight: 600;
 }
 
@@ -1536,7 +1536,7 @@ a:focus-visible {
 
 .week-bar {
   width: 100%;
-  background: var(--gold);
+  background: #4FD1B5;
   border-radius: 4px 4px 0 0;
   min-height: 4px;
   transition: all 0.3s;
@@ -1612,7 +1612,7 @@ a:focus-visible {
 }
 
 .modal-close:hover {
-  color: var(--gold);
+  color: #4FD1B5;
 }
 
 .modal-body {
@@ -1644,7 +1644,7 @@ a:focus-visible {
 .modal-value {
   font-size: 1.3rem;
   font-weight: 700;
-  color: var(--gold);
+  color: #4FD1B5;
 }
 
 .no-sessions {
@@ -1664,7 +1664,7 @@ a:focus-visible {
   background: var(--surface-raised);
   padding: 12px;
   border-radius: 6px;
-  border-left: 3px solid var(--gold);
+  border-left: 3px solid #4FD1B5;
 }
 
 .session-course {
@@ -1684,7 +1684,7 @@ a:focus-visible {
   display: flex;
   justify-content: space-between;
   font-size: 0.85rem;
-  color: var(--gold);
+  color: #4FD1B5;
 }
 
 /* Mobile responsive */
