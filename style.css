@@ -10,16 +10,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #10131a;
-  --surface: #171b24;
-  --surface-raised: #1f2430;
-  --line: #2a3040;
-  --locked: #3a3f4b;
-  --gold: #e8a33d;
-  --gold-dim: #6b5327;
-  --ember: #e85d3d;
-  --text: #edeef0;
-  --text-muted: #8b92a3;
+  --bg: #0B1220;
+  --surface: #111B2E;
+  --surface-raised: #17243A;
+  --line: #24344D;
+  --locked: #3A475D;
+  --gold: #F5B942;
+  --gold-dim: #7A6330;
+  --ember: #F87171;
+  --text: #F1F5F9;
+  --text-muted: #94A3B8;
   --radius: 10px;
   --serif: 'Fraunces', Georgia, serif;
   --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -156,7 +156,7 @@ a:focus-visible {
 .btn-primary {
   width: 100%;
   background: var(--gold);
-  color: #1a1300;
+  color: #071A17;
   font-weight: 600;
   font-size: 15px;
   padding: 12px;
@@ -197,9 +197,9 @@ a:focus-visible {
 }
 
 .auth-error {
-  background: rgba(232, 93, 61, 0.12);
+  background: rgba(248, 113, 113, 0.12);
   border: 1px solid var(--ember);
-  color: #ffb9a4;
+  color: #FECACA;
   font-size: 13px;
   padding: 10px 12px;
   border-radius: 8px;
@@ -434,7 +434,7 @@ a:focus-visible {
 .path-node.completed .node-dot {
   background: var(--gold);
   border-color: var(--gold);
-  color: #1a1300;
+  color: #071A17;
 }
 
 .path-node.current .node-dot {
@@ -527,7 +527,7 @@ a:focus-visible {
 
 .btn-start {
   background: var(--gold);
-  color: #1a1300;
+  color: #071A17;
   font-weight: 600;
   font-size: 13px;
   padding: 8px 16px;
@@ -591,7 +591,7 @@ a:focus-visible {
 
 .btn-timer-main {
   background: var(--gold);
-  color: #1a1300;
+  color: #071A17;
 }
 
 .btn-timer-ghost {
@@ -602,7 +602,7 @@ a:focus-visible {
 
 .btn-complete {
   background: var(--gold);
-  color: #1a1300;
+  color: #071A17;
   font-weight: 700;
   font-size: 16px;
   padding: 14px;
@@ -1148,7 +1148,7 @@ a:focus-visible {
 
 /* ============ COURSE PATH VIEW ============ */
 .view-path {
-  background: linear-gradient(135deg, #1a1f3a 0%, #0f1419 100%);
+  background: linear-gradient(135deg, #0E1A2B 0%, #0B1220 100%);
 }
 
 #path-container {
@@ -1158,8 +1158,8 @@ a:focus-visible {
 }
 
 .path-module {
-  background: #1e2433;
-  border: 2px solid #2a3150;
+  background: #132238;
+  border: 2px solid #29405B;
   border-radius: 12px;
   padding: 16px;
   transition: all 0.3s ease;
@@ -1167,26 +1167,26 @@ a:focus-visible {
 }
 
 .path-module:hover {
-  border-color: #ff9f1c;
-  background: #252d42;
+  border-color: #F5B942;
+  background: #1B2C45;
   transform: translateX(4px);
 }
 
 .path-module.completed {
-  border-color: #2ecc71;
+  border-color: #34D399;
   background: rgba(46, 204, 113, 0.05);
 }
 
 .path-module.active {
-  border-color: #ff9f1c;
+  border-color: #F5B942;
   background: rgba(255, 159, 28, 0.05);
   box-shadow: 0 0 20px rgba(255, 159, 28, 0.2);
 }
 
 .path-module.locked {
   opacity: 0.6;
-  border-color: #34495e;
-  background: #14171f;
+  border-color: #3A475D;
+  background: #0F1726;
   cursor: not-allowed;
 }
 
@@ -1200,7 +1200,7 @@ a:focus-visible {
 .path-day {
   font-size: 14px;
   font-weight: bold;
-  color: #ff9f1c;
+  color: #F5B942;
   background: rgba(255, 159, 28, 0.1);
   padding: 4px 12px;
   border-radius: 20px;
@@ -1209,31 +1209,31 @@ a:focus-visible {
 .path-status {
   font-size: 12px;
   font-weight: bold;
-  color: #95a5a6;
+  color: #94A3B8;
 }
 
 .path-module.completed .path-status {
-  color: #2ecc71;
+  color: #34D399;
 }
 
 .path-module.active .path-status {
-  color: #ff9f1c;
+  color: #F5B942;
 }
 
 .path-module.locked .path-status {
-  color: #7f8c8d;
+  color: #64748B;
 }
 
 .path-module-title {
   font-size: 18px;
   font-weight: 600;
-  color: #ecf0f1;
+  color: #F1F5F9;
   margin-bottom: 6px;
 }
 
 .path-module-time {
   font-size: 13px;
-  color: #95a5a6;
+  color: #94A3B8;
   margin-bottom: 12px;
 }
 
@@ -1250,22 +1250,22 @@ a:focus-visible {
 }
 
 .btn-watch {
-  background: #3498db;
-  color: white;
+  background: #4FD1B5;
+  color: #071A17;
 }
 
 .btn-watch:hover {
-  background: #2980b9;
+  background: #35BFA5;
   transform: scale(1.02);
 }
 
 .btn-continue-module {
-  background: #ff9f1c;
+  background: #F5B942;
   color: #000;
 }
 
 .btn-continue-module:hover {
-  background: #ffb840;
+  background: #FFD166;
   transform: scale(1.02);
 }
 
@@ -1382,7 +1382,7 @@ a:focus-visible {
 
 .btn-cal-mode.active {
   background: var(--gold);
-  color: #1a1300;
+  color: #071A17;
   border-color: var(--gold);
   font-weight: 600;
 }
