@@ -2548,5 +2548,5 @@ function showDateDetailsModal(dateStr) {
 function initLearningCalendar() {
   calendarDate = new Date();
   calendarMode = 'month';
-  renderLearningProgressCalendar();
-}
+  renderLearningProgressCalendar();}
+
