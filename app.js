@@ -1258,7 +1258,7 @@ function createYouTubePlayer(videoId, startSeconds) {
   container.innerHTML = '';
 
   // INVIDIOUS = ZERO ADS, NO TRACKING
-const invidious_instance = 'https://invidious.protokolla.fi';
+const invidious_instance = 'https://invidious.jing.rocks';
    const startTime = Math.floor(startSeconds);
   
   const iframeHTML = `
