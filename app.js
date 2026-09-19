@@ -1258,7 +1258,7 @@ function createYouTubePlayer(videoId, startSeconds) {
   container.innerHTML = '';
 
   // INVIDIOUS = ZERO ADS, NO TRACKING
-  const invidious_instance = 'https://yewtu.be';
+  const invidious_instance = 'https://invidious.snopyta.org';
   const startTime = Math.floor(startSeconds);
   
   const iframeHTML = `
