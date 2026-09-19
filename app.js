@@ -1516,7 +1516,7 @@ function createYouTubePlayer(videoId, startSeconds) {
   container.innerHTML = '';
 
   // Use Invidious instead of YouTube (NO ADS FOR YOUR USERS!)
-  const invidious_instance = 'https://yewtu.be';
+  const invidious_instance = 'https://inv.nadeko.net';
   const startTime = Math.floor(startSeconds);
   
   const iframeHTML = `
