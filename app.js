@@ -1257,13 +1257,22 @@ function createYouTubePlayer(videoId, startSeconds) {
 
   container.innerHTML = '';
 
-  // INVIDIOUS = ZERO ADS, NO TRACKING
-const invidious_instance = 'https://invidious.jing.rocks';
-   const startTime = Math.floor(startSeconds);
+  const startTime = Math.floor(startSeconds);
   
   const iframeHTML = `
     <iframe 
-    src="${invidious_instance}/watch?v=${videoId}&t=${startTime}"
+      src="https://www.youtube.com/embed/${videoId}?start=${startTime}&modestbranding=1&rel=0"
+      style="width: 100%; height: 100%; border: none; min-height: 400px;"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowfullscreen
+      sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation">
+    </iframe>
+  `;
+  
+  container.innerHTML = iframeHTML;
+  youtubePlayer = null;
+  youtubeAPIReady = false;
+}
       style="width: 100%; height: 100%; border: none; min-height: 400px;"
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       allowfullscreen
