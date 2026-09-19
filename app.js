@@ -1,7 +1,7 @@
 /* ===========================================================
    LEARNLOCK — app.js
    All the app's behavior lives here. Read the comments — they
-   explain what each part does, since you're new to coding.
+   explain what each part does, since you're new to coding. 
 =========================================================== */
 
 const MAX_ACTIVE_COURSES = 3; 
