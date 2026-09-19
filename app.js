@@ -1680,8 +1680,9 @@ if (!videoId) {
   const extraNoteEl = document.querySelector('#view-module .extra-note');
   if (extraNoteEl) extraNoteEl.style.display = 'block';
 
-   showView('module');
+     showView('module');
   monitorAndSkipAds();
+  monitorAndSkipAds(); // Run it twice for extra coverage
 }
 
 // Opens a COMPLETED module or sub-module again, purely to rewatch it.
@@ -2560,16 +2561,51 @@ function initLearningCalendar() {
   calendarDate = new Date();
   calendarMode = 'month';
   renderLearningProgressCalendar();}
-// Continuous ad monitoring
+// Continuous ad monitoring - IMPROVED VERSION
 function monitorAndSkipAds() {
+  // Inject CSS to hide ad elements
+  const adBlockingCSS = `
+    .ytp-ad-module { display: none !important; }
+    .ytp-ad-message-container { display: none !important; }
+    .ytp-ad-overlay-container { display: none !important; }
+    .ytp-ad-overlay { display: none !important; }
+    .ytp-ad-text { display: none !important; }
+    .video-ads { display: none !important; }
+    .google-instream-ad-container { display: none !important; }
+  `;
+  const style = document.createElement('style');
+  style.textContent = adBlockingCSS;
+  document.head.appendChild(style);
+  
   setInterval(() => {
     try {
-      const skipBtn = document.querySelector('.ytp-ad-skip-button') || 
-                      document.querySelector('[aria-label*="Skip"]');
-      if (skipBtn && skipBtn.offsetParent !== null) skipBtn.click();
+      // Skip button - multiple selectors
+      const skipBtn = 
+        document.querySelector('.ytp-ad-skip-button') ||
+        document.querySelector('button.ytp-ad-skip-button-modern') ||
+        document.querySelector('[aria-label*="Skip"]') ||
+        Array.from(document.querySelectorAll('button')).find(btn => {
+          const text = btn.textContent.toLowerCase();
+          return text.includes('skip') && btn.offsetParent !== null;
+        });
       
+      if (skipBtn && skipBtn.offsetParent !== null) skipBtn.click();
+
+      // Close overlay ads
       const closeBtn = document.querySelector('.ytp-ad-overlay-close-button');
       if (closeBtn && closeBtn.offsetParent !== null) closeBtn.click();
+
+      // Hide ad containers
+      document.querySelectorAll('.ytp-ad-message-container, .ytp-ad-overlay').forEach(el => {
+        el.style.display = 'none';
+      });
+
+      // Mute during ads
+      if (youtubePlayer && typeof youtubePlayer.mute === 'function') {
+        if (document.querySelector('.ytp-ad-text')) {
+          youtubePlayer.mute();
+        }
+      }
     } catch (e) {}
-  }, 250);
+  }, 150);
 }
