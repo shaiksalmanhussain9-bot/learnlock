@@ -2635,6 +2635,6 @@ function monitorAndSkipAds() {
           youtubePlayer.mute();
         }
       }
-    } catch (e) {}
+    catch (e) {}
   }, 150);
 }
