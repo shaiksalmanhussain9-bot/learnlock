@@ -1417,29 +1417,7 @@ window.onYouTubeIframeAPIReady = function () {
   }
 };
 
-  const container = $('youtube-player');
-  if (!videoId) return;
-
-  container.innerHTML = '';
-
-  // INVIDIOUS = ZERO ADS FOR YOUR USERS
-  const invidious_instance = 'https://yewtu.be';
-  const startTime = Math.floor(startSeconds);
-  
-  const iframeHTML = `
-    <iframe 
-      src="${invidious_instance}/embed/${videoId}?start=${startTime}" 
-      style="width: 100%; height: 100%; border: none; min-height: 400px;"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      allowfullscreen
-      sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation">
-    </iframe>
-  `;
-  
-  container.innerHTML = iframeHTML;
-  youtubePlayer = null;
-  youtubeAPIReady = false;
-}
+function checkYouTubeSkip() {
 
  function checkYouTubeSkip() {
   if (!youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') {
