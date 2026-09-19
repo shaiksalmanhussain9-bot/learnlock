@@ -1477,10 +1477,11 @@ return false;
 }
 
 function onYouTubeStateChange(event) {
-  // Auto-skip ads
+  // Auto-skip ads more aggressively
   if (event.data === YT.PlayerState.UNSTARTED) {
     try {
-      const skipBtn = document.querySelector('.ytp-ad-skip-button');
+      let skipBtn = document.querySelector('.ytp-ad-skip-button');
+      if (!skipBtn) skipBtn = document.querySelector('[aria-label*="Skip"]');
       if (skipBtn) skipBtn.click();
     } catch (e) {}
   }
@@ -1576,30 +1577,39 @@ function createYouTubePlayer(videoId, startSeconds) {
   });
 }
 
-// New function to handle ads
+// Enhanced function to handle and skip all YouTube ads
 function onPlayerReady(event) {
   const player = event.target;
   
-  // Auto-skip ads when they start
+  // Aggressive ad-skipping with multiple selector attempts
   const skipAdsInterval = setInterval(() => {
     try {
-      if (player.getVideoData().video_id) {
-        // Ad is playing, try to skip
-        const skipButton = document.querySelector('.ytp-ad-skip-button') || 
-                          document.querySelector('button.ytp-ad-skip-button-modern');
-        if (skipButton) {
-          skipButton.click();
-          clearInterval(skipAdsInterval);
-        }
+      // Try multiple selectors for the skip button (YouTube changes these)
+      const skipButton = 
+        document.querySelector('.ytp-ad-skip-button') ||
+        document.querySelector('button.ytp-ad-skip-button-modern') ||
+        document.querySelector('.ytp-ad-skip-button-modern') ||
+        document.querySelector('[aria-label="Skip ad"]') ||
+        document.querySelector('[aria-label="Skip Ad"]') ||
+        Array.from(document.querySelectorAll('button')).find(btn => 
+          btn.textContent.includes('Skip') && btn.offsetParent !== null
+        );
+      
+      if (skipButton && skipButton.offsetParent !== null) {
+        // Button exists and is visible
+        skipButton.click();
+        console.log('Ad skipped');
+        clearInterval(skipAdsInterval);
       }
     } catch (e) {
-      // Silent fail - player might not have getVideoData yet
+      // Silent fail
     }
-  }, 500);
+  }, 300); // Check more frequently (every 300ms instead of 500ms)
 
-  // Stop checking after 15 seconds
-  setTimeout(() => clearInterval(skipAdsInterval), 15000);
+  // Stop checking after 20 seconds
+  setTimeout(() => clearInterval(skipAdsInterval), 20000);
 }
+
 function openModule(moduleId) {
   reviewMode = false;
   activeModuleId = moduleId;
@@ -1670,7 +1680,8 @@ if (!videoId) {
   const extraNoteEl = document.querySelector('#view-module .extra-note');
   if (extraNoteEl) extraNoteEl.style.display = 'block';
 
-  showView('module');
+   showView('module');
+  monitorAndSkipAds();
 }
 
 // Opens a COMPLETED module or sub-module again, purely to rewatch it.
@@ -2549,4 +2560,16 @@ function initLearningCalendar() {
   calendarDate = new Date();
   calendarMode = 'month';
   renderLearningProgressCalendar();}
-
+// Continuous ad monitoring
+function monitorAndSkipAds() {
+  setInterval(() => {
+    try {
+      const skipBtn = document.querySelector('.ytp-ad-skip-button') || 
+                      document.querySelector('[aria-label*="Skip"]');
+      if (skipBtn && skipBtn.offsetParent !== null) skipBtn.click();
+      
+      const closeBtn = document.querySelector('.ytp-ad-overlay-close-button');
+      if (closeBtn && closeBtn.offsetParent !== null) closeBtn.click();
+    } catch (e) {}
+  }, 250);
+}
