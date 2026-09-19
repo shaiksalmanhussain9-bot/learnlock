@@ -1263,7 +1263,7 @@ function createYouTubePlayer(videoId, startSeconds) {
   
   const iframeHTML = `
     <iframe 
-      src="${invidious_instance}/embed/${videoId}?start=${startTime}" 
+    src="${invidious_instance}/watch?v=${videoId}&t=${startTime}"
       style="width: 100%; height: 100%; border: none; min-height: 400px;"
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       allowfullscreen
