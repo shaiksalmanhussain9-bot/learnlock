@@ -1417,8 +1417,6 @@ window.onYouTubeIframeAPIReady = function () {
   }
 };
 
-function checkYouTubeSkip() {
-
  function checkYouTubeSkip() {
   if (!youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') {
     return false;
