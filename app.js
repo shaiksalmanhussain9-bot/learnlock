@@ -1562,7 +1562,7 @@ function onPlayerReady(event) {
         console.log('Ad skipped');
         clearInterval(skipAdsInterval);
       }
-    } catch (e) {
+    catch (e) {
       // Silent fail
     }
   }, 300); // Check more frequently (every 300ms instead of 500ms)
