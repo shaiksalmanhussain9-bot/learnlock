@@ -293,7 +293,7 @@ function friendlyAuthError(err) {
 
 $('logout-btn').addEventListener('click', () => auth.signOut());
 
-// Loads everything the dashboard needs, showing a loading state while
+// Loads everything the dashboard needs, showing a loading state while 
 // it works and a retryable error state if anything fails (e.g. no
 // network connection).
 async function loadAndShowDashboard() {
