@@ -1,31 +1,3 @@
-// AGGRESSIVE AD-BLOCKING CSS - runs immediately
-const adBlockingCSS = document.createElement('style');
-adBlockingCSS.textContent = `
-  /* Hide all YouTube ad elements */
-  .ytp-ad-module, 
-  .ytp-ad-message-container,
-  .ytp-ad-overlay-container,
-  .ytp-ad-overlay,
-  .ytp-ad-text,
-  .video-ads,
-  .google-instream-ad-container,
-  .ytp-player div[id*="ad"],
-  [id*="google_ads"],
-  [class*="advertisement"],
-  [class*="advert"] { 
-    display: none !important; 
-    visibility: hidden !important;
-  }
-
-  /* Make sure skip button is always visible */
-  .ytp-ad-skip-button,
-  .ytp-ad-skip-button-modern {
-    display: block !important;
-    visibility: visible !important;
-  }
-`;
-document.head.appendChild(adBlockingCSS);
-
 /* ===========================================================
    LEARNLOCK — app.js
    All the app's behavior lives here. Read the comments — they
@@ -1441,47 +1413,29 @@ window.onYouTubeIframeAPIReady = function () {
 
     pendingYouTubeRequest = null;
 
-    createYouTubePlayer(videoId, startSeconds);
-  }
-};
+   function createYouTubePlayer(videoId, startSeconds) {
+  const container = $('youtube-player');
+  if (!videoId) return;
 
-function extractYouTubeId(url) {
-  if (!url) return null;
+  container.innerHTML = '';
 
-  const trimmed = url.trim();
-
-  try {
-    const u = new URL(trimmed);
-    const host = u.hostname.replace('www.', '');
-
-    if (host === 'youtu.be') {
-      return u.pathname.slice(1).split('/')[0] || null;
-    }
-
-    if (
-      host === 'youtube.com' ||
-      host === 'm.youtube.com' ||
-      host === 'music.youtube.com'
-    ) {
-      if (u.pathname === '/watch') {
-        return u.searchParams.get('v');
-      }
-
-      const match = u.pathname.match(
-        /^\/(embed|shorts|live)\/([^/?]+)/
-      );
-
-      if (match) {
-        return match[2];
-      }
-    }
-  } catch (e) {
-    if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
-      return trimmed;
-    }
-  }
-
-  return null;
+  // INVIDIOUS = ZERO ADS FOR YOUR USERS
+  const invidious_instance = 'https://yewtu.be';
+  const startTime = Math.floor(startSeconds);
+  
+  const iframeHTML = `
+    <iframe 
+      src="${invidious_instance}/embed/${videoId}?start=${startTime}" 
+      style="width: 100%; height: 100%; border: none; min-height: 400px;"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowfullscreen
+      sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation">
+    </iframe>
+  `;
+  
+  container.innerHTML = iframeHTML;
+  youtubePlayer = null;
+  youtubeAPIReady = false;
 }
 
  function checkYouTubeSkip() {
@@ -1578,35 +1532,35 @@ function onYouTubeStateChange(event) {
 
 function createYouTubePlayer(videoId, startSeconds) {
   const container = $('youtube-player');
-
   if (!videoId) return;
-
-  if (!youtubeAPIReady || typeof YT === 'undefined' || !YT.Player) {
-    pendingYouTubeRequest = { videoId, startSeconds };
-    container.innerHTML = '<div class="video-missing">Loading player…</div>';
-    return;
-  }
 
   container.innerHTML = '';
 
-  youtubePlayer = new YT.Player('youtube-player', {
-    videoId: videoId,
-    playerVars: {
-      autoplay: 0,
-      controls: 1,
-      start: startSeconds,
-      modestbranding: 1,
-      rel: 0  // ← Disables related videos
-    },
-    events: {
-      onStateChange: onYouTubeStateChange,
-      onReady: onPlayerReady
-    }
-  });
+  // Use Invidious instead of YouTube (NO ADS FOR YOUR USERS!)
+  const invidious_instance = 'https://yewtu.be';
+  const startTime = Math.floor(startSeconds);
+  
+  const iframeHTML = `
+    <iframe 
+      src="${invidious_instance}/embed/${videoId}?start=${startTime}" 
+      style="width: 100%; height: 100%; border: none; min-height: 400px;"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowfullscreen
+      sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation">
+    </iframe>
+  `;
+  
+  container.innerHTML = iframeHTML;
+  
+  // Since we're not using YouTube API anymore, disable related functions
+  youtubePlayer = null;
+  youtubeAPIReady = false;
 }
-
 // Enhanced function to handle and skip all YouTube ads
 function onPlayerReady(event) {
+  // Invidious handles everything - no ads needed
+  console.log('Player ready');
+}
   const player = event.target;
   
   // Aggressive ad-skipping with multiple selector attempts
@@ -1709,9 +1663,7 @@ if (!videoId) {
   if (extraNoteEl) extraNoteEl.style.display = 'block';
 
      showView('module');
-  monitorAndSkipAds();
-  monitorAndSkipAds(); // Run it twice for extra coverage
-}
+  }
 
 // Opens a COMPLETED module or sub-module again, purely to rewatch it.
 // Doesn't touch progress, XP, or the resume-within-24h state — it's
@@ -2589,51 +2541,3 @@ function initLearningCalendar() {
   calendarDate = new Date();
   calendarMode = 'month';
   renderLearningProgressCalendar();}
-// Continuous ad monitoring - IMPROVED VERSION
-function monitorAndSkipAds() {
-  // Inject CSS to hide ad elements
-  const adBlockingCSS = `
-    .ytp-ad-module { display: none !important; }
-    .ytp-ad-message-container { display: none !important; }
-    .ytp-ad-overlay-container { display: none !important; }
-    .ytp-ad-overlay { display: none !important; }
-    .ytp-ad-text { display: none !important; }
-    .video-ads { display: none !important; }
-    .google-instream-ad-container { display: none !important; }
-  `;
-  const style = document.createElement('style');
-  style.textContent = adBlockingCSS;
-  document.head.appendChild(style);
-  
-  setInterval(() => {
-    try {
-      // Skip button - multiple selectors
-      const skipBtn = 
-        document.querySelector('.ytp-ad-skip-button') ||
-        document.querySelector('button.ytp-ad-skip-button-modern') ||
-        document.querySelector('[aria-label*="Skip"]') ||
-        Array.from(document.querySelectorAll('button')).find(btn => {
-          const text = btn.textContent.toLowerCase();
-          return text.includes('skip') && btn.offsetParent !== null;
-        });
-      
-      if (skipBtn && skipBtn.offsetParent !== null) skipBtn.click();
-
-      // Close overlay ads
-      const closeBtn = document.querySelector('.ytp-ad-overlay-close-button');
-      if (closeBtn && closeBtn.offsetParent !== null) closeBtn.click();
-
-      // Hide ad containers
-      document.querySelectorAll('.ytp-ad-message-container, .ytp-ad-overlay').forEach(el => {
-        el.style.display = 'none';
-      });
-
-      // Mute during ads
-      if (youtubePlayer && typeof youtubePlayer.mute === 'function') {
-        if (document.querySelector('.ytp-ad-text')) {
-          youtubePlayer.mute();
-        }
-      }
-    } catch (e) {}
-  }, 150);
-}
