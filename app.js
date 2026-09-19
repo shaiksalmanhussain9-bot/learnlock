@@ -1515,27 +1515,18 @@ function createYouTubePlayer(videoId, startSeconds) {
 
   container.innerHTML = '';
 
-  // Use Invidious instead of YouTube (NO ADS FOR YOUR USERS!)
-  const invidious_instance = 'https://inv.nadeko.net';
-  const startTime = Math.floor(startSeconds);
-  
-  const iframeHTML = `
-    <iframe 
-      src="${invidious_instance}/embed/${videoId}?start=${startTime}" 
-      style="width: 100%; height: 100%; border: none; min-height: 400px;"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      allowfullscreen
-      sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation">
-    </iframe>
-  `;
-  
-  container.innerHTML = iframeHTML;
-  
-  // Since we're not using YouTube API anymore, disable related functions
-  youtubePlayer = null;
-  youtubeAPIReady = false;
+  youtubePlayer = new YT.Player('youtube-player', {
+    videoId: videoId,
+    playerVars: {
+      start: Math.floor(startSeconds),
+      autoplay: 0,
+      rel: 0
+    },
+    events: {
+      onStateChange: onYouTubeStateChange
+    }
+  });
 }
-
 // ===========================================================
 // UTILS
 // ===========================================================
