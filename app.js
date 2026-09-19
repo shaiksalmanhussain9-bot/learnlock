@@ -1412,8 +1412,10 @@ window.onYouTubeIframeAPIReady = function () {
     const { videoId, startSeconds } = pendingYouTubeRequest;
 
     pendingYouTubeRequest = null;
+    createYouTubePlayer(videoId, startSeconds);
+  }
+};
 
-   function createYouTubePlayer(videoId, startSeconds) {
   const container = $('youtube-player');
   if (!videoId) return;
 
