@@ -2501,4 +2501,4 @@ function initLearningCalendar() {
   calendarDate = new Date();
   calendarMode = 'month';
   renderLearningProgressCalendar();
-   ]
+}
