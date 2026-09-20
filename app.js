@@ -1456,52 +1456,7 @@ function extractYouTubeId(url) {
   return null;
 }
 
- function checkYouTubeSkip() {
-  if (!youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') {
-    return false;
-  }
-
-  const currentTime = youtubePlayer.getCurrentTime();
-
-if (currentTime > youtubeMaxWatchedSeconds + 2) {
-  youtubePlayer.seekTo(youtubeMaxWatchedSeconds, true);
-  return true;
-}
-
-youtubeMaxWatchedSeconds = Math.max(
-  youtubeMaxWatchedSeconds,
-  currentTime
-);
-
-return false;
-}
-
-      if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
-          const course = getActiveCourse();
-          const mod = getActiveUnit(course);
-
-          if (mod) {
-            const endSeconds = timeToSeconds(mod.endTime);
-            const currentSeconds = youtubePlayer.getCurrentTime();
-
-            if (currentSeconds >= endSeconds) {
-              youtubePlayer.pauseVideo();
-              timerSecondsLeft = 0;
-              updateTimerDisplay();
-            }
-          }
-        }
-
-        if (timerSecondsLeft <= 0) {
-          clearInterval(timerInterval);
-          timerRunning = false;
-          $('btn-timer-pause').style.display = 'none';
-        }
-      }, 1000);
-    }
-  }
-
- function createYouTubePlayer(videoId, startSeconds) {
+  function createYouTubePlayer(videoId, startSeconds) {
   const container = $('youtube-player');
   if (!videoId) return;
   container.innerHTML = '';
