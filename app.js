@@ -1637,11 +1637,7 @@ $('btn-timer-start').addEventListener('click', () => {
 
  timerInterval = setInterval(() => {
 
-  if (checkYouTubeSkip()) {
-    return;
-  }
-
-  if (timerSecondsLeft > 0) {
+    if (timerSecondsLeft > 0) {
     timerSecondsLeft -= 1;
 
     updateTimerDisplay();
