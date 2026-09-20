@@ -1446,17 +1446,22 @@ function extractYouTubeId(url) {
 
 function createYouTubePlayer(videoId, startSeconds) {
   const container = $('youtube-player');
-
   if (!videoId) return;
 
-    container.innerHTML = '';
+  container.innerHTML = '';
 
- const startTime = Math.floor(startSeconds);
-const html = '<iframe src="https://www.youtube.com/embed/' + videoId + '?start=' + startTime + '&modestbranding=1&rel=0" style="width: 100%; height: 100%; border: none; min-height: 400px;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"></iframe>';
-
-container.innerHTML = html;
-youtubePlayer = null;
-youtubeAPIReady = false;
+  youtubePlayer = new YT.Player('youtube-player', {
+    videoId: videoId,
+    playerVars: {
+      start: Math.floor(startSeconds),
+      modestbranding: 1,
+      rel: 0,
+      autoplay: 0
+    },
+    events: {
+      onStateChange: onYouTubeStateChange
+    }
+  });
 }
 
 // Enhanced function to handle and skip all YouTube ads
