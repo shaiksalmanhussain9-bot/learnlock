@@ -1508,28 +1508,30 @@ const playerContainer = $('youtube-player');
 
 if (!videoId) {
   playerContainer.innerHTML = '<div class="video-missing">⚠️ No playable video found. Paste a direct video link (open the video, copy the URL from the address bar) — not a playlist link.</div>';
-createYouTubePlayer(videoId, videoStartSeconds);
-  youtubeMaxWatchedSeconds = videoStartSeconds;
-  timerSecondsLeft = timerTotalSeconds - resumeElapsed;
-  timerRunning = false;
-  clearInterval(timerInterval);
+} else {
+  createYouTubePlayer(videoId, videoStartSeconds);
+}
 
-  if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
+youtubeMaxWatchedSeconds = videoStartSeconds;
+timerSecondsLeft = timerTotalSeconds - resumeElapsed;
+timerRunning = false;
+clearInterval(timerInterval);
+
+if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
   youtubePlayer.pauseVideo();
 }
 
-  updateTimerDisplay();
-  $('btn-timer-start').style.display = 'inline-block';
-  $('btn-timer-start').textContent = isResuming ? '▶ Continue' : '▶ Start learning';
-  $('btn-timer-pause').style.display = 'none';
-  $('btn-complete-module').style.display = 'block';
-  $('btn-complete-module').textContent = 'Complete module';
-  const extraNoteEl = document.querySelector('#view-module .extra-note');
-  if (extraNoteEl) extraNoteEl.style.display = 'block';
+updateTimerDisplay();
+$('btn-timer-start').style.display = 'inline-block';
+$('btn-timer-start').textContent = isResuming ? '▶ Continue' : '▶ Start learning';
+$('btn-timer-pause').style.display = 'none';
+$('btn-complete-module').style.display = 'block';
+$('btn-complete-module').textContent = 'Complete module';
+const extraNoteEl = document.querySelector('#view-module .extra-note');
+if (extraNoteEl) extraNoteEl.style.display = 'block';
 
-    showView('module');
-   }
-
+showView('module');
+}
 // Opens a COMPLETED module or sub-module again, purely to rewatch it.
 // Doesn't touch progress, XP, or the resume-within-24h state — it's
 // just a video player pointed at that unit's own start/end range.
