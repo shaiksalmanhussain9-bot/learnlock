@@ -1551,30 +1551,15 @@ function onYouTubeStateChange(event) {
 function createYouTubePlayer(videoId, startSeconds) {
   const container = $('youtube-player');
   if (!videoId) return;
-
   container.innerHTML = '';
-
-  // Use Invidious instead of YouTube (NO ADS FOR YOUR USERS!)
-  const invidious_instance = 'https://yewtu.be';
   const startTime = Math.floor(startSeconds);
   
-  const iframeHTML = `
-    <iframe 
-      src="${invidious_instance}/embed/${videoId}?start=${startTime}" 
-      style="width: 100%; height: 100%; border: none; min-height: 400px;"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      allowfullscreen
-      sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation">
-    </iframe>
-  `;
+  const html = '<iframe src="https://www.youtube.com/embed/' + videoId + '?start=' + startTime + '&modestbranding=1&rel=0" style="width: 100%; height: 100%; border: none; min-height: 400px;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"></iframe>';
   
-  container.innerHTML = iframeHTML;
-  
-  // Since we're not using YouTube API anymore, disable related functions
+  container.innerHTML = html;
   youtubePlayer = null;
   youtubeAPIReady = false;
 }
-// Enhanced function to handle and skip all YouTube ads
 
 function openModule(moduleId) {
   reviewMode = false;
