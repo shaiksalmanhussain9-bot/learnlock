@@ -1476,42 +1476,7 @@ youtubeMaxWatchedSeconds = Math.max(
 return false;
 }
 
-function onYouTubeStateChange(event) {
-  // Auto-skip ads more aggressively
-  if (event.data === YT.PlayerState.UNSTARTED) {
-    try {
-      let skipBtn = document.querySelector('.ytp-ad-skip-button');
-      if (!skipBtn) skipBtn = document.querySelector('[aria-label*="Skip"]');
-      if (skipBtn) skipBtn.click();
-    } catch (e) {}
-  }
-
-  if (event.data === YT.PlayerState.PLAYING) {
-    if (timerSecondsLeft > 0 && !timerRunning) {
-      timerRunning = true;
-
-      $('btn-timer-start').style.display = 'none';
-      $('btn-timer-pause').style.display = 'inline-block';
-
-      timerInterval = setInterval(() => {
-        if (checkYouTubeSkip()) {
-          return;
-        }
-
-        if (timerSecondsLeft > 0) {
-          timerSecondsLeft -= 1;
-
-          if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
-            youtubeMaxWatchedSeconds = Math.max(
-              youtubeMaxWatchedSeconds,
-              youtubePlayer.getCurrentTime()
-            );
-          }
-
-          updateTimerDisplay();
-        }
-
-        if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
+      if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
           const course = getActiveCourse();
           const mod = getActiveUnit(course);
 
