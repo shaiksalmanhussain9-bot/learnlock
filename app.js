@@ -1405,18 +1405,6 @@ function renderPath() {
 // ===========================================================
 
 // YouTube calls this automatically when the IFrame API finishes loading
-window.onYouTubeIframeAPIReady = function () {
-  youtubeAPIReady = true;
-
-  if (pendingYouTubeRequest) {
-    const { videoId, startSeconds } = pendingYouTubeRequest;
-
-    pendingYouTubeRequest = null;
-
-    createYouTubePlayer(videoId, startSeconds);
-  }
-};
-
 function extractYouTubeId(url) {
   if (!url) return null;
 
@@ -1456,98 +1444,6 @@ function extractYouTubeId(url) {
   return null;
 }
 
- function checkYouTubeSkip() {
-  if (!youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') {
-    return false;
-  }
-
-  const currentTime = youtubePlayer.getCurrentTime();
-
-if (currentTime > youtubeMaxWatchedSeconds + 2) {
-  youtubePlayer.seekTo(youtubeMaxWatchedSeconds, true);
-  return true;
-}
-
-youtubeMaxWatchedSeconds = Math.max(
-  youtubeMaxWatchedSeconds,
-  currentTime
-);
-
-return false;
-}
-
-function onYouTubeStateChange(event) {
-  // Auto-skip ads more aggressively
-  if (event.data === YT.PlayerState.UNSTARTED) {
-    try {
-      let skipBtn = document.querySelector('.ytp-ad-skip-button');
-      if (!skipBtn) skipBtn = document.querySelector('[aria-label*="Skip"]');
-      if (skipBtn) skipBtn.click();
-    } catch (e) {}
-  }
-
-  if (event.data === YT.PlayerState.PLAYING) {
-    if (timerSecondsLeft > 0 && !timerRunning) {
-      timerRunning = true;
-
-      $('btn-timer-start').style.display = 'none';
-      $('btn-timer-pause').style.display = 'inline-block';
-
-      timerInterval = setInterval(() => {
-        if (checkYouTubeSkip()) {
-          return;
-        }
-
-        if (timerSecondsLeft > 0) {
-          timerSecondsLeft -= 1;
-
-          if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
-            youtubeMaxWatchedSeconds = Math.max(
-              youtubeMaxWatchedSeconds,
-              youtubePlayer.getCurrentTime()
-            );
-          }
-
-          updateTimerDisplay();
-        }
-
-        if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
-          const course = getActiveCourse();
-          const mod = getActiveUnit(course);
-
-          if (mod) {
-            const endSeconds = timeToSeconds(mod.endTime);
-            const currentSeconds = youtubePlayer.getCurrentTime();
-
-            if (currentSeconds >= endSeconds) {
-              youtubePlayer.pauseVideo();
-              timerSecondsLeft = 0;
-              updateTimerDisplay();
-            }
-          }
-        }
-
-        if (timerSecondsLeft <= 0) {
-          clearInterval(timerInterval);
-          timerRunning = false;
-          $('btn-timer-pause').style.display = 'none';
-        }
-      }, 1000);
-    }
-  }
-
-  if (event.data === YT.PlayerState.PAUSED) {
-    if (timerRunning) {
-      timerRunning = false;
-      clearInterval(timerInterval);
-
-      $('btn-timer-pause').style.display = 'none';
-      $('btn-timer-start').style.display = 'inline-block';
-      $('btn-timer-start').textContent = '▶ Resume';
-    }
-  }
-}
-
 function createYouTubePlayer(videoId, startSeconds) {
   const container = $('youtube-player');
 
@@ -1570,37 +1466,6 @@ youtubeAPIReady = false;
 }
 
 // Enhanced function to handle and skip all YouTube ads
-function onPlayerReady(event) {
-  const player = event.target;
-  
-  // Aggressive ad-skipping with multiple selector attempts
-  const skipAdsInterval = setInterval(() => {
-    try {
-      // Try multiple selectors for the skip button (YouTube changes these)
-      const skipButton = 
-        document.querySelector('.ytp-ad-skip-button') ||
-        document.querySelector('button.ytp-ad-skip-button-modern') ||
-        document.querySelector('.ytp-ad-skip-button-modern') ||
-        document.querySelector('[aria-label="Skip ad"]') ||
-        document.querySelector('[aria-label="Skip Ad"]') ||
-        Array.from(document.querySelectorAll('button')).find(btn => 
-          btn.textContent.includes('Skip') && btn.offsetParent !== null
-        );
-      
-      if (skipButton && skipButton.offsetParent !== null) {
-        // Button exists and is visible
-        skipButton.click();
-        console.log('Ad skipped');
-        clearInterval(skipAdsInterval);
-      }
-    } catch (e) {
-      // Silent fail
-    }
-  }, 300); // Check more frequently (every 300ms instead of 500ms)
-
-  // Stop checking after 20 seconds
-  setTimeout(() => clearInterval(skipAdsInterval), 20000);
-}
 function openModule(moduleId) {
   reviewMode = false;
   activeModuleId = moduleId;
