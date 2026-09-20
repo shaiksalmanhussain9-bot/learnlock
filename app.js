@@ -2513,5 +2513,4 @@ function monitorAndSkipAds() {
       const closeBtn = document.querySelector('.ytp-ad-overlay-close-button');
       if (closeBtn && closeBtn.offsetParent !== null) closeBtn.click();
     } catch (e) {}
-  }, 250);
-}
+  }, 250);}
