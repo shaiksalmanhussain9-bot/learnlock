@@ -1681,6 +1681,7 @@ if (!videoId) {
 
     showView('module');
   monitorAndSkipAds();
+   monitorAndSkipAds();
 }
 
 // Opens a COMPLETED module or sub-module again, purely to rewatch it.
