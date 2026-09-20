@@ -1590,11 +1590,7 @@ function onPlayerReady(event) {
     }
   }, 1000);
 }
-  }, 300); // Check more frequently (every 300ms instead of 500ms)
-
-  // Stop checking after 20 seconds
-  setTimeout(() => clearInterval(skipAdsInterval), 20000);
-}
+  
 function openModule(moduleId) {
   reviewMode = false;
   activeModuleId = moduleId;
