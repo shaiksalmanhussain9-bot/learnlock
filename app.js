@@ -1548,27 +1548,21 @@ function onYouTubeStateChange(event) {
   }
 }
 
-function createYouTubePlayer(videoId, startSeconds) {
+function createYouTubePlayer(videoId, startSeconds = 0) {
   const container = $('youtube-player');
-  if (!videoId) return;
+
+  if (!container || !videoId) return;
+
   container.innerHTML = '';
-  const startTime = Math.floor(startSeconds);
-  
-  const html = '<iframe src="https://www.youtube.com/embed/' + videoId + '?start=' + startTime + '&modestbranding=1&rel=0" style="width: 100%; height: 100%; border: none; min-height: 400px;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"></iframe>';
-  
-  container.innerHTML = html;
-  youtubePlayer = null;
-  youtubeAPIReady = false;
-}
 
   youtubePlayer = new YT.Player('youtube-player', {
-    videoId: videoId,
+    videoId,
     playerVars: {
       autoplay: 0,
       controls: 1,
-      start: startSeconds,
+      start: Math.floor(startSeconds),
       modestbranding: 1,
-      rel: 0  // ← Disables related videos
+      rel: 0
     },
     events: {
       onStateChange: onYouTubeStateChange,
@@ -1576,7 +1570,6 @@ function createYouTubePlayer(videoId, startSeconds) {
     }
   });
 }
-
 // Enhanced function to handle and skip all YouTube ads
 function onPlayerReady(event) {
   const player = event.target;
