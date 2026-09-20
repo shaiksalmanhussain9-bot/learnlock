@@ -1508,16 +1508,7 @@ const playerContainer = $('youtube-player');
 
 if (!videoId) {
   playerContainer.innerHTML = '<div class="video-missing">⚠️ No playable video found. Paste a direct video link (open the video, copy the URL from the address bar) — not a playlist link.</div>';
-} else if (!youtubeAPIReady) {
-  playerContainer.innerHTML = '<div class="video-missing">Loading player…</div>';
-  pendingYouTubeRequest = {
-    videoId,
-    startSeconds: videoStartSeconds
-  };
-} else {
-  createYouTubePlayer(videoId, videoStartSeconds);
-}
-
+createYouTubePlayer(videoId, videoStartSeconds);
   youtubeMaxWatchedSeconds = videoStartSeconds;
   timerSecondsLeft = timerTotalSeconds - resumeElapsed;
   timerRunning = false;
@@ -1569,9 +1560,6 @@ function openModuleForReview(moduleId, subModuleId) {
 
   if (!videoId) {
     playerContainer.innerHTML = '<div class="video-missing">⚠️ No playable video found.</div>';
-  } else if (!youtubeAPIReady) {
-    playerContainer.innerHTML = '<div class="video-missing">Loading player…</div>';
-    pendingYouTubeRequest = { videoId, startSeconds: unitStartSeconds };
   } else {
     createYouTubePlayer(videoId, unitStartSeconds);
   }
