@@ -1761,7 +1761,10 @@ function updateTimerDisplay() {
 
 $('btn-timer-start').addEventListener('click', () => {
   if (timerRunning) return;
-  timerRunning = true;
+  
+  // Wait 3 seconds for ads to play, then start timer
+  setTimeout(() => {
+    timerRunning = true;
 
   if (youtubePlayer && typeof youtubePlayer.playVideo === 'function') {
   youtubePlayer.playVideo();
@@ -1807,8 +1810,9 @@ $('btn-timer-start').addEventListener('click', () => {
     timerRunning = false;
     $('btn-timer-pause').style.display = 'none';
   }
-}, 1000);
-});
+}, 1000);  // closes setInterval
+  }, 6000);  // closes setTimeout — wait 6 seconds for ads
+});  // closes addEventListener
 
 $('btn-timer-pause').addEventListener('click', () => {
   if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
