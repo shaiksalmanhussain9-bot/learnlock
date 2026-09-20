@@ -1,31 +1,3 @@
-// AGGRESSIVE AD-BLOCKING CSS - runs immediately
-const adBlockingCSS = document.createElement('style');
-adBlockingCSS.textContent = `
-  /* Hide all YouTube ad elements */
-  .ytp-ad-module, 
-  .ytp-ad-message-container,
-  .ytp-ad-overlay-container,
-  .ytp-ad-overlay,
-  .ytp-ad-text,
-  .video-ads,
-  .google-instream-ad-container,
-  .ytp-player div[id*="ad"],
-  [id*="google_ads"],
-  [class*="advertisement"],
-  [class*="advert"] { 
-    display: none !important; 
-    visibility: hidden !important;
-  }
-
-  /* Make sure skip button is always visible */
-  .ytp-ad-skip-button,
-  .ytp-ad-skip-button-modern {
-    display: block !important;
-    visibility: visible !important;
-  }
-`;
-document.head.appendChild(adBlockingCSS);
-
 /* ===========================================================
    LEARNLOCK — app.js
    All the app's behavior lives here. Read the comments — they
