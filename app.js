@@ -1548,21 +1548,27 @@ function onYouTubeStateChange(event) {
   }
 }
 
-function createYouTubePlayer(videoId, startSeconds = 0) {
+function createYouTubePlayer(videoId, startSeconds) {
   const container = $('youtube-player');
 
-  if (!container || !videoId) return;
+  if (!videoId) return;
+
+  if (!youtubeAPIReady || typeof YT === 'undefined' || !YT.Player) {
+    pendingYouTubeRequest = { videoId, startSeconds };
+    container.innerHTML = '<div class="video-missing">Loading player…</div>';
+    return;
+  }
 
   container.innerHTML = '';
 
   youtubePlayer = new YT.Player('youtube-player', {
-    videoId,
+    videoId: videoId,
     playerVars: {
       autoplay: 0,
       controls: 1,
-      start: Math.floor(startSeconds),
+      start: startSeconds,
       modestbranding: 1,
-      rel: 0
+      rel: 0  // ← Disables related videos
     },
     events: {
       onStateChange: onYouTubeStateChange,
@@ -1570,6 +1576,7 @@ function createYouTubePlayer(videoId, startSeconds = 0) {
     }
   });
 }
+
 // Enhanced function to handle and skip all YouTube ads
 function onPlayerReady(event) {
   const player = event.target;
@@ -1673,7 +1680,9 @@ if (!videoId) {
   if (extraNoteEl) extraNoteEl.style.display = 'block';
 
     showView('module');
-  }
+  monitorAndSkipAds();
+   monitorAndSkipAds();
+}
 
 // Opens a COMPLETED module or sub-module again, purely to rewatch it.
 // Doesn't touch progress, XP, or the resume-within-24h state — it's
