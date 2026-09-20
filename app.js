@@ -1561,20 +1561,12 @@ function createYouTubePlayer(videoId, startSeconds) {
 
   container.innerHTML = '';
 
-  youtubePlayer = new YT.Player('youtube-player', {
-    videoId: videoId,
-    playerVars: {
-      autoplay: 0,
-      controls: 1,
-      start: startSeconds,
-      modestbranding: 1,
-      rel: 0  // ← Disables related videos
-    },
-    events: {
-      onStateChange: onYouTubeStateChange,
-      onReady: onPlayerReady
-    }
-  });
+ const startTime = Math.floor(startSeconds);
+const html = '<iframe src="https://www.youtube.com/embed/' + videoId + '?start=' + startTime + '&modestbranding=1&rel=0" style="width: 100%; height: 100%; border: none; min-height: 400px;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"></iframe>';
+
+container.innerHTML = html;
+youtubePlayer = null;
+youtubeAPIReady = false;
 }
 
 // Enhanced function to handle and skip all YouTube ads
@@ -1680,8 +1672,6 @@ if (!videoId) {
   if (extraNoteEl) extraNoteEl.style.display = 'block';
 
     showView('module');
-  monitorAndSkipAds();
-   monitorAndSkipAds();
 }
 
 // Opens a COMPLETED module or sub-module again, purely to rewatch it.
