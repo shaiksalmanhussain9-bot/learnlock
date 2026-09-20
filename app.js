@@ -2550,17 +2550,3 @@ function initLearningCalendar() {
   calendarDate = new Date();
   calendarMode = 'month';
   renderLearningProgressCalendar();}
-
-// Continuous ad monitoring
-function monitorAndSkipAds() {
-  setInterval(() => {
-    try {
-      const skipBtn = document.querySelector('.ytp-ad-skip-button') || 
-                      document.querySelector('[aria-label*="Skip"]');
-      if (skipBtn && skipBtn.offsetParent !== null) skipBtn.click();
-      
-      const closeBtn = document.querySelector('.ytp-ad-overlay-close-button');
-      if (closeBtn && closeBtn.offsetParent !== null) closeBtn.click();
-    } catch (e) {}
-  }, 250);
-}
