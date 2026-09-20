@@ -1444,6 +1444,25 @@ function extractYouTubeId(url) {
   return null;
 }
 
+function onYouTubeStateChange(event) {
+  if (event.data === YT.PlayerState.PLAYING) {
+    if (!timerRunning) {
+      timerRunning = true;
+      $('btn-timer-start').style.display = 'none';
+      $('btn-timer-pause').style.display = 'inline-block';
+    }
+  }
+
+  if (event.data === YT.PlayerState.PAUSED) {
+    if (timerRunning) {
+      timerRunning = false;
+      $('btn-timer-pause').style.display = 'none';
+      $('btn-timer-start').style.display = 'inline-block';
+      $('btn-timer-start').textContent = '▶ Resume';
+    }
+  }
+}
+
 function createYouTubePlayer(videoId, startSeconds) {
   const container = $('youtube-player');
   if (!videoId) return;
