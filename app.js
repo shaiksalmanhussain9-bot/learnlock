@@ -1672,6 +1672,8 @@ if (!videoId) {
   if (extraNoteEl) extraNoteEl.style.display = 'block';
 
     showView('module');
+     monitorAndSkipAds();
+   monitorAndSkipAds();
 }
 
 // Opens a COMPLETED module or sub-module again, purely to rewatch it.
