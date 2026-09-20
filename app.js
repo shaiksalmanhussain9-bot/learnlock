@@ -1575,41 +1575,6 @@ function createYouTubePlayer(videoId, startSeconds) {
   youtubeAPIReady = false;
 }
 // Enhanced function to handle and skip all YouTube ads
-function onPlayerReady(event) {
-  // Invidious doesn't need player-ready handling
-  // Timer will work independently
-  console.log('Player ready (Invidious)');
-}
-  const player = event.target;
-  
-  // Aggressive ad-skipping with multiple selector attempts
-  const skipAdsInterval = setInterval(() => {
-    try {
-      // Try multiple selectors for the skip button (YouTube changes these)
-      const skipButton = 
-        document.querySelector('.ytp-ad-skip-button') ||
-        document.querySelector('button.ytp-ad-skip-button-modern') ||
-        document.querySelector('.ytp-ad-skip-button-modern') ||
-        document.querySelector('[aria-label="Skip ad"]') ||
-        document.querySelector('[aria-label="Skip Ad"]') ||
-        Array.from(document.querySelectorAll('button')).find(btn => 
-          btn.textContent.includes('Skip') && btn.offsetParent !== null
-        );
-      
-      if (skipButton && skipButton.offsetParent !== null) {
-        // Button exists and is visible
-        skipButton.click();
-        console.log('Ad skipped');
-        clearInterval(skipAdsInterval);
-      }
-    } catch (e) {
-      // Silent fail
-    }
-  }, 300); // Check more frequently (every 300ms instead of 500ms)
-
-  // Stop checking after 20 seconds
-  setTimeout(() => clearInterval(skipAdsInterval), 20000);
-}
 
 function openModule(moduleId) {
   reviewMode = false;
