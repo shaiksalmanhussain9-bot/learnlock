@@ -1561,22 +1561,6 @@ function createYouTubePlayer(videoId, startSeconds) {
   youtubeAPIReady = false;
 }
 
-  youtubePlayer = new YT.Player('youtube-player', {
-    videoId: videoId,
-    playerVars: {
-      autoplay: 0,
-      controls: 1,
-      start: startSeconds,
-      modestbranding: 1,
-      rel: 0  // ← Disables related videos
-    },
-    events: {
-      onStateChange: onYouTubeStateChange,
-      onReady: onPlayerReady
-    }
-  });
-}
-
 // Enhanced function to handle and skip all YouTube ads
 function onPlayerReady(event) {
   const player = event.target;
