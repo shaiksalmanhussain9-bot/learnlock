@@ -1609,50 +1609,42 @@ $('btn-timer-start').addEventListener('click', () => {
   timerRunning = true;
 
   if (youtubePlayer && typeof youtubePlayer.playVideo === 'function') {
-  youtubePlayer.playVideo();
-  // Correct immediately if they seeked forward while paused, instead
-  // of waiting up to 1 second for the first interval tick below.
-  checkYouTubeSkip();
-}
+    youtubePlayer.playVideo();
+  }
+
   $('btn-timer-start').style.display = 'none';
   $('btn-timer-pause').style.display = 'inline-block';
 
- timerInterval = setInterval(() => {
+  timerInterval = setInterval(() => {
+    if (timerSecondsLeft > 0) {
+      timerSecondsLeft -= 1;
+      updateTimerDisplay();
+    }
 
-  if (checkYouTubeSkip()) {
-    return;
-  }
-
-  if (timerSecondsLeft > 0) {
-    timerSecondsLeft -= 1;
-
-    updateTimerDisplay();
-  }
-
-  if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
     const course = getActiveCourse();
     const mod = getActiveUnit(course);
 
     if (mod) {
       const endSeconds = timeToSeconds(mod.endTime);
-      const currentSeconds = youtubePlayer.getCurrentTime();
+      const currentSeconds = youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function' 
+        ? youtubePlayer.getCurrentTime() 
+        : 0;
 
-     if (currentSeconds >= endSeconds && youtubeMaxWatchedSeconds >= endSeconds) {
-  youtubePlayer.pauseVideo();
-  timerSecondsLeft = 0;
-  updateTimerDisplay();
-
-  $('btn-complete-module').disabled = false;
-}
+      if (currentSeconds >= endSeconds && currentSeconds > 0) {
+        if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
+          youtubePlayer.pauseVideo();
+        }
+        timerSecondsLeft = 0;
+        updateTimerDisplay();
+      }
     }
-  }
 
     if (timerSecondsLeft <= 0) {
-    clearInterval(timerInterval);
-    timerRunning = false;
-    $('btn-timer-pause').style.display = 'none';
-  }
-}, 1000);
+      clearInterval(timerInterval);
+      timerRunning = false;
+      $('btn-timer-pause').style.display = 'none';
+    }
+  }, 1000);
 });
 
 $('btn-timer-pause').addEventListener('click', () => {
