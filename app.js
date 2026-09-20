@@ -1813,7 +1813,6 @@ $('btn-timer-start').addEventListener('click', () => {
 }, 1000);  // closes setInterval
   }, 6000);  // closes setTimeout — wait 6 seconds for ads
 });  // closes addEventListener
-
 $('btn-timer-pause').addEventListener('click', () => {
   if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
     youtubePlayer.pauseVideo();
