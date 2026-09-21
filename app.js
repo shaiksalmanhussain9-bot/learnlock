@@ -1507,11 +1507,16 @@ function startTimerInterval() {
       }
     }
 
-    if (timerSecondsLeft <= 0) {
-      clearInterval(timerInterval);
-      timerRunning = false;
-      $('btn-timer-pause').style.display = 'none';
-    }
+   if (timerSecondsLeft <= 0) {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  $('btn-timer-pause').style.display = 'none';
+  
+  // STOP VIDEO when timer reaches 00:00:00
+  if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
+    youtubePlayer.pauseVideo();
+  }
+}
   }, 1000);
 }
 
