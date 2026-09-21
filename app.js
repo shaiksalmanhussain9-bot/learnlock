@@ -648,16 +648,16 @@ async function shareCourseWithFriend(course, friend) {
   const shareId = `${course.id}_${friend.uid}`;
   const shareRef = db.collection('sharedCourses').doc(shareId);
 
-  const existingSnap = await shareRef.get();
-  if (existingSnap.exists) {
-    const data = existingSnap.data();
-    if (data.status === 'pending' || data.status === 'accepted') {
-      toast(`This course has already been shared with ${friend.email}.`);
-      return;
-    }
-  }
-
   try {
+    const existingSnap = await shareRef.get();
+    if (existingSnap.exists) {
+      const data = existingSnap.data();
+      if (data.status === 'pending' || data.status === 'accepted') {
+        toast(`This course has already been shared with ${friend.email}.`);
+        return;
+      }
+    }
+
     const shareData = {
       courseId: course.id,
       name: course.name,
@@ -675,9 +675,7 @@ async function shareCourseWithFriend(course, friend) {
     };
 
     console.log('WRITING TO FIREBASE:', shareData);
-    
     await shareRef.set(shareData);
-    
     console.log('SUCCESS: Course invite sent');
     toast(`✅ "${course.name}" successfully sent to ${friend.email}.`);
     document.querySelectorAll('.course-share-panel').forEach(p => p.remove());
