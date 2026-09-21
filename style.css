@@ -1744,3 +1744,20 @@ a:focus-visible {
     margin-top: 2px;
   }
 }
+.youtube-player-wrap-inner { position: relative; }
+.youtube-pause-shield {
+  position: absolute;
+  inset: 0;
+  background: rgba(11,18,32,0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  color: var(--text);
+  font-size: 14px;
+  border-radius: 8px;
+  z-index: 5;
+  pointer-events: auto;
+}
+.youtube-pause-shield.hidden { display: none; pointer-events: none; }
