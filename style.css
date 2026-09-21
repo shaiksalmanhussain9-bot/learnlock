@@ -1109,6 +1109,13 @@ a:focus-visible {
 .cancel-share:hover {
   color: var(--text);
 }
+.course-share-panel strong {
+  display: block;
+  word-break: break-word;
+  white-space: normal;
+  max-width: none;
+  width: auto;
+}
 /* ---------- Video player (responsive at every screen size) ---------- */
 .youtube-player-wrap {
   width: 100%;
