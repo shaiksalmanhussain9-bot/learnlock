@@ -89,6 +89,7 @@ let youtubePlayer = null;
 let youtubeMaxWatchedSeconds = 0;
 let youtubeAPIReady = false;
 let pendingYouTubeRequest = null;
+let currentCourseVideoId = null; // the actual course video's YouTube ID, used to tell it apart from ads
 
 // ---------- Small helpers ----------
 
@@ -1456,6 +1457,20 @@ function extractYouTubeId(url) {
   return null;
 }
 
+// True when the player is currently showing something other than the
+// actual course video (i.e. an ad) — used to keep the countdown timer
+// from running during ads. Doesn't touch the ad in any way.
+function isAdPlaying() {
+  if (!youtubePlayer || typeof youtubePlayer.getVideoData !== 'function') return false;
+  try {
+    const data = youtubePlayer.getVideoData();
+    if (!data || !data.video_id) return false;
+    return currentCourseVideoId && data.video_id !== currentCourseVideoId;
+  } catch (e) {
+    return false; // if we can't tell, assume it's fine rather than getting stuck
+  }
+}
+
  function checkYouTubeSkip() {
   if (!youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') {
     return false;
@@ -1487,6 +1502,11 @@ function onYouTubeStateChange(event) {
   }
 
   if (event.data === YT.PlayerState.PLAYING) {
+    if (isAdPlaying()) {
+      $('timer-label').textContent = '⏸ Ad playing — timer paused';
+      return; // don't start the timer while an ad is showing
+    }
+
     if (timerSecondsLeft > 0 && !timerRunning) {
       timerRunning = true;
 
@@ -1494,6 +1514,11 @@ function onYouTubeStateChange(event) {
       $('btn-timer-pause').style.display = 'inline-block';
 
       timerInterval = setInterval(() => {
+        if (isAdPlaying()) {
+          $('timer-label').textContent = '⏸ Ad playing — timer paused';
+          return; // freeze the countdown for this tick, don't count ad time
+        }
+
         if (checkYouTubeSkip()) {
           return;
         }
@@ -1549,6 +1574,7 @@ function onYouTubeStateChange(event) {
 }
 
 function createYouTubePlayer(videoId, startSeconds) {
+  currentCourseVideoId = videoId; // remember this so we can detect ads later
   const container = $('youtube-player');
 
   if (!videoId) return;
@@ -1776,6 +1802,11 @@ $('btn-timer-start').addEventListener('click', () => {
   $('btn-timer-pause').style.display = 'inline-block';
 
  timerInterval = setInterval(() => {
+
+  if (isAdPlaying()) {
+    $('timer-label').textContent = '⏸ Ad playing — timer paused';
+    return; // freeze the countdown for this tick, don't count ad time
+  }
 
   if (checkYouTubeSkip()) {
     return;
