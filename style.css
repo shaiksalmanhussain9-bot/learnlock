@@ -278,6 +278,7 @@ a:focus-visible {
   padding: 16px 4px;
   border-bottom: 1px solid var(--line);
   cursor: pointer;
+  flex-wrap: wrap;
 }
 
 .course-item:hover .course-name { color: #4FD1B5; }
@@ -1070,6 +1071,7 @@ a:focus-visible {
   border-radius: 8px;
   width: 100%;
   min-width: 280px;
+  flex-basis: 100%;
 }
 
 .course-share-panel strong {
