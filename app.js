@@ -1,5 +1,12 @@
 /* ===========================================================
-   LEARNLOCK — app.js
+   LEARNLOCK — app.js (FIXED VERSION)
+   
+   CHANGES APPLIED:
+   1. ✅ Updated onYouTubeStateChange() - Ad detection + timer control
+   2. ✅ Added startTimerInterval() - Separated timer logic with safety
+   3. ✅ Updated btn-timer-start click handler - Deferred start approach
+   4. ✅ Verified btn-timer-pause handler - Already correct
+   
    All the app's behavior lives here. Read the comments — they
    explain what each part does, since you're new to coding.
 =========================================================== */
@@ -1471,7 +1478,7 @@ function isAdPlaying() {
   }
 }
 
- function checkYouTubeSkip() {
+function checkYouTubeSkip() {
   if (!youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') {
     return false;
   }
@@ -1491,6 +1498,15 @@ youtubeMaxWatchedSeconds = Math.max(
 return false;
 }
 
+// ===========================================================
+// ✅ CHANGE #1: UPDATED onYouTubeStateChange() FUNCTION
+// ===========================================================
+// KEY FIXES:
+// 1. Checks if ad is playing FIRST
+// 2. Stops timer if ad starts
+// 3. Only starts timer when video confirmed + playRequested set
+// ===========================================================
+
 function onYouTubeStateChange(event) {
   // Auto-skip ads more aggressively
   if (event.data === YT.PlayerState.UNSTARTED) {
@@ -1502,62 +1518,25 @@ function onYouTubeStateChange(event) {
   }
 
   if (event.data === YT.PlayerState.PLAYING) {
+    // 🔴 CRITICAL: CHECK IF AN AD IS PLAYING FIRST
     if (isAdPlaying()) {
       $('timer-label').textContent = '⏸ Ad playing — timer paused';
-      return; // don't start the timer while an ad is showing
+      // Stop timer if it's running during an ad
+      if (timerRunning) {
+        timerRunning = false;
+        clearInterval(timerInterval);
+        $('btn-timer-pause').style.display = 'none';
+        $('btn-timer-start').style.display = 'inline-block';
+        $('btn-timer-start').textContent = '▶ Resume';
+      }
+      return; // Don't start timer while ad is showing
     }
 
-    if (timerSecondsLeft > 0 && !timerRunning) {
-      timerRunning = true;
-
-      $('btn-timer-start').style.display = 'none';
-      $('btn-timer-pause').style.display = 'inline-block';
-
-      timerInterval = setInterval(() => {
-        if (isAdPlaying()) {
-          $('timer-label').textContent = '⏸ Ad playing — timer paused';
-          return; // freeze the countdown for this tick, don't count ad time
-        }
-
-        if (checkYouTubeSkip()) {
-          return;
-        }
-
-        if (timerSecondsLeft > 0) {
-          timerSecondsLeft -= 1;
-
-          if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
-            youtubeMaxWatchedSeconds = Math.max(
-              youtubeMaxWatchedSeconds,
-              youtubePlayer.getCurrentTime()
-            );
-          }
-
-          updateTimerDisplay();
-        }
-
-        if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
-          const course = getActiveCourse();
-          const mod = getActiveUnit(course);
-
-          if (mod) {
-            const endSeconds = timeToSeconds(mod.endTime);
-            const currentSeconds = youtubePlayer.getCurrentTime();
-
-            if (currentSeconds >= endSeconds) {
-              youtubePlayer.pauseVideo();
-              timerSecondsLeft = 0;
-              updateTimerDisplay();
-            }
-          }
-        }
-
-        if (timerSecondsLeft <= 0) {
-          clearInterval(timerInterval);
-          timerRunning = false;
-          $('btn-timer-pause').style.display = 'none';
-        }
-      }, 1000);
+    // ✅ ACTUAL COURSE VIDEO IS PLAYING
+    // Start timer only when user requested play AND video is actually playing
+    if (timerSecondsLeft > 0 && !timerRunning && $('btn-timer-start').dataset.playRequested === 'true') {
+      startTimerInterval();
+      $('btn-timer-start').dataset.playRequested = 'false';
     }
   }
 
@@ -1573,37 +1552,73 @@ function onYouTubeStateChange(event) {
   }
 }
 
-function createYouTubePlayer(videoId, startSeconds) {
-  currentCourseVideoId = videoId; // remember this so we can detect ads later
-  const container = $('youtube-player');
+// ===========================================================
+// ✅ CHANGE #2: NEW startTimerInterval() FUNCTION
+// ===========================================================
+// Separated timer logic with safety checks
+// Checks for ads every tick
+// ===========================================================
 
-  if (!videoId) return;
+function startTimerInterval() {
+  timerRunning = true;
+  $('btn-timer-start').style.display = 'none';
+  $('btn-timer-pause').style.display = 'inline-block';
+  $('timer-label').textContent = 'Time remaining';
 
-  if (!youtubeAPIReady || typeof YT === 'undefined' || !YT.Player) {
-    pendingYouTubeRequest = { videoId, startSeconds };
-    container.innerHTML = '<div class="video-missing">Loading player…</div>';
-    return;
-  }
-
-  container.innerHTML = '';
-
-  youtubePlayer = new YT.Player('youtube-player', {
-    videoId: videoId,
-    playerVars: {
-      autoplay: 0,
-      controls: 1,
-      start: startSeconds,
-      modestbranding: 1,
-      rel: 0  // ← Disables related videos
-    },
-    events: {
-      onStateChange: onYouTubeStateChange,
-      onReady: onPlayerReady
+  timerInterval = setInterval(() => {
+    // 🔴 SAFETY CHECK: If an ad starts playing, pause timer immediately
+    if (isAdPlaying()) {
+      $('timer-label').textContent = '⏸ Ad playing — timer paused';
+      timerRunning = false;
+      clearInterval(timerInterval);
+      $('btn-timer-pause').style.display = 'none';
+      $('btn-timer-start').style.display = 'inline-block';
+      $('btn-timer-start').textContent = '▶ Resume';
+      return;
     }
-  });
+
+    if (checkYouTubeSkip()) {
+      return;
+    }
+
+    if (timerSecondsLeft > 0) {
+      timerSecondsLeft -= 1;
+
+      if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
+        youtubeMaxWatchedSeconds = Math.max(
+          youtubeMaxWatchedSeconds,
+          youtubePlayer.getCurrentTime()
+        );
+      }
+
+      updateTimerDisplay();
+    }
+
+    if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
+      const course = getActiveCourse();
+      const mod = getActiveUnit(course);
+
+      if (mod) {
+        const endSeconds = timeToSeconds(mod.endTime);
+        const currentSeconds = youtubePlayer.getCurrentTime();
+
+        if (currentSeconds >= endSeconds && youtubeMaxWatchedSeconds >= endSeconds) {
+          youtubePlayer.pauseVideo();
+          timerSecondsLeft = 0;
+          updateTimerDisplay();
+          $('btn-complete-module').disabled = false;
+        }
+      }
+    }
+
+    if (timerSecondsLeft <= 0) {
+      clearInterval(timerInterval);
+      timerRunning = false;
+      $('btn-timer-pause').style.display = 'none';
+    }
+  }, 1000);
 }
 
-// Enhanced function to handle and skip all YouTube ads
 function onPlayerReady(event) {
   const player = event.target;
   
@@ -1634,6 +1649,36 @@ function onPlayerReady(event) {
 
   // Stop checking after 20 seconds
   setTimeout(() => clearInterval(skipAdsInterval), 20000);
+}
+
+function createYouTubePlayer(videoId, startSeconds) {
+  currentCourseVideoId = videoId; // remember this so we can detect ads later
+  const container = $('youtube-player');
+
+  if (!videoId) return;
+
+  if (!youtubeAPIReady || typeof YT === 'undefined' || !YT.Player) {
+    pendingYouTubeRequest = { videoId, startSeconds };
+    container.innerHTML = '<div class="video-missing">Loading player…</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+
+  youtubePlayer = new YT.Player('youtube-player', {
+    videoId: videoId,
+    playerVars: {
+      autoplay: 0,
+      controls: 1,
+      start: startSeconds,
+      modestbranding: 1,
+      rel: 0  // ← Disables related videos
+    },
+    events: {
+      onStateChange: onYouTubeStateChange,
+      onReady: onPlayerReady
+    }
+  });
 }
 
 function openModule(moduleId) {
@@ -1688,27 +1733,26 @@ if (!videoId) {
   createYouTubePlayer(videoId, videoStartSeconds);
 }
 
-  youtubeMaxWatchedSeconds = videoStartSeconds;
-  timerSecondsLeft = timerTotalSeconds - resumeElapsed;
-  timerRunning = false;
-  clearInterval(timerInterval);
+youtubeMaxWatchedSeconds = videoStartSeconds;
+timerSecondsLeft = timerTotalSeconds - resumeElapsed;
+timerRunning = false;
+clearInterval(timerInterval);
 
-  if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
+if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
   youtubePlayer.pauseVideo();
 }
 
-  updateTimerDisplay();
-  $('btn-timer-start').style.display = 'inline-block';
-  $('btn-timer-start').textContent = isResuming ? '▶ Continue' : '▶ Start learning';
-  $('btn-timer-pause').style.display = 'none';
-  $('btn-complete-module').style.display = 'block';
-  $('btn-complete-module').textContent = 'Complete module';
-  const extraNoteEl = document.querySelector('#view-module .extra-note');
-  if (extraNoteEl) extraNoteEl.style.display = 'block';
+updateTimerDisplay();
+$('btn-timer-start').style.display = 'inline-block';
+$('btn-timer-start').textContent = isResuming ? '▶ Continue' : '▶ Start learning';
+$('btn-timer-pause').style.display = 'none';
+$('btn-complete-module').style.display = 'block';
+$('btn-complete-module').textContent = 'Complete module';
+const extraNoteEl = document.querySelector('#view-module .extra-note');
+if (extraNoteEl) extraNoteEl.style.display = 'block';
 
-  showView('module');
-  monitorAndSkipAds();
-   monitorAndSkipAds();
+showView('module');
+monitorAndSkipAds();
 }
 
 // Opens a COMPLETED module or sub-module again, purely to rewatch it.
@@ -1788,61 +1832,36 @@ function updateTimerDisplay() {
   }
 }
 
+// ===========================================================
+// ✅ CHANGE #3: UPDATED btn-timer-start CLICK HANDLER
+// ===========================================================
+// KEY CHANGES:
+// 1. Set playRequested = 'true' instead of starting timer immediately
+// 2. Call playVideo() but DON'T start interval
+// 3. Let onYouTubeStateChange handler verify and start timer
+// ===========================================================
+
 $('btn-timer-start').addEventListener('click', () => {
   if (timerRunning) return;
-  timerRunning = true;
-
+  
+  // ✅ Mark that user requested playback
+  // Actual timer starts in onYouTubeStateChange when video really plays
+  $('btn-timer-start').dataset.playRequested = 'true';
+  
   if (youtubePlayer && typeof youtubePlayer.playVideo === 'function') {
-  youtubePlayer.playVideo();
-  // Correct immediately if they seeked forward while paused, instead
-  // of waiting up to 1 second for the first interval tick below.
-  checkYouTubeSkip();
-}
+    youtubePlayer.playVideo();
+    // Correct immediately if they seeked forward while paused
+    checkYouTubeSkip();
+  }
+  
+  // Show pause button immediately (will hide if ad detected)
   $('btn-timer-start').style.display = 'none';
   $('btn-timer-pause').style.display = 'inline-block';
-
- timerInterval = setInterval(() => {
-
-  if (isAdPlaying()) {
-    $('timer-label').textContent = '⏸ Ad playing — timer paused';
-    return; // freeze the countdown for this tick, don't count ad time
-  }
-
-  if (checkYouTubeSkip()) {
-    return;
-  }
-
-  if (timerSecondsLeft > 0) {
-    timerSecondsLeft -= 1;
-
-    updateTimerDisplay();
-  }
-
-  if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
-    const course = getActiveCourse();
-    const mod = getActiveUnit(course);
-
-    if (mod) {
-      const endSeconds = timeToSeconds(mod.endTime);
-      const currentSeconds = youtubePlayer.getCurrentTime();
-
-     if (currentSeconds >= endSeconds && youtubeMaxWatchedSeconds >= endSeconds) {
-  youtubePlayer.pauseVideo();
-  timerSecondsLeft = 0;
-  updateTimerDisplay();
-
-  $('btn-complete-module').disabled = false;
-}
-    }
-  }
-
-    if (timerSecondsLeft <= 0) {
-    clearInterval(timerInterval);
-    timerRunning = false;
-    $('btn-timer-pause').style.display = 'none';
-  }
-}, 1000);
 });
+
+// ===========================================================
+// ✅ CHANGE #4: btn-timer-pause HANDLER (Already Correct)
+// ===========================================================
 
 $('btn-timer-pause').addEventListener('click', () => {
   if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
@@ -1997,6 +2016,7 @@ if (unit) {
     showView('path');
   }
 });
+
 // ===========================================================
 // FRIENDS
 // ===========================================================
@@ -2065,6 +2085,7 @@ await db.collection('users')
     toast('Could not send friend request.');
   }
 });
+
 async function loadFriendRequests() {
   const list = $('friend-requests-list');
 
@@ -2112,6 +2133,7 @@ async function loadFriendRequests() {
     list.innerHTML = '<p>Could not load friend requests.</p>';
   }
 }
+
 async function acceptFriendRequest(requestId, request) {
   try {
     await db.collection('users')
@@ -2206,6 +2228,7 @@ async function loadFriends() {
     list.innerHTML = '<p>Could not load friends.</p>';
   }
 }
+
 /* ============================================================
    LEARNLOCK — Learning Progress Calendar Module
 =========================================================== */
@@ -2299,7 +2322,7 @@ function getMonthStats(year, month) {
 }
 
 // ============================================================
-// NEW CALENDAR RENDERING
+// CALENDAR RENDERING
 // ============================================================
 
 // Calendar mode: 'month' or 'week'
@@ -2587,11 +2610,11 @@ function showDateDetailsModal(dateStr) {
 // INITIALIZE CALENDAR
 // ============================================================
 
-// Call this in your loadAndShowDashboard() or renderDashboard()
 function initLearningCalendar() {
   calendarDate = new Date();
   calendarMode = 'month';
-  renderLearningProgressCalendar();}
+  renderLearningProgressCalendar();
+}
 
 // Continuous ad monitoring
 function monitorAndSkipAds() {
