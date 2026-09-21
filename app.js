@@ -94,6 +94,7 @@ let timerInterval = null;
 let timerRunning = false;
 let youtubePlayer = null;
 let youtubeMaxWatchedSeconds = 0;
+let youtubeSeekProtectionInterval = null;
 let youtubeAPIReady = false;
 let pendingYouTubeRequest = null;
 let currentCourseVideoId = null; // the actual course video's YouTube ID, used to tell it apart from ads
@@ -1489,8 +1490,8 @@ function checkYouTubeSkip() {
 
   const currentTime = youtubePlayer.getCurrentTime();
 
-  // Small tolerance prevents false corrections caused by YouTube's
-  // normal timing differences.
+  // Small tolerance prevents false corrections caused by normal
+  // YouTube timing differences.
   const allowedTime = youtubeMaxWatchedSeconds + 1;
 
   if (currentTime > allowedTime) {
@@ -1498,13 +1499,36 @@ function checkYouTubeSkip() {
     return true;
   }
 
-  // Only increase the allowed position when the video naturally reaches it.
+  // Increase the allowed position only when the video moves naturally.
   youtubeMaxWatchedSeconds = Math.max(
     youtubeMaxWatchedSeconds,
     currentTime
   );
 
   return false;
+}
+
+function startForwardSeekProtection() {
+  stopForwardSeekProtection();
+
+  if (
+    reviewMode ||
+    !youtubePlayer ||
+    typeof youtubePlayer.getCurrentTime !== 'function'
+  ) {
+    return;
+  }
+
+  youtubeSeekProtectionInterval = setInterval(() => {
+    checkYouTubeSkip();
+  }, 100);
+}
+
+function stopForwardSeekProtection() {
+  if (youtubeSeekProtectionInterval) {
+    clearInterval(youtubeSeekProtectionInterval);
+    youtubeSeekProtectionInterval = null;
+  }
 }
 
 // ===========================================================
@@ -1592,14 +1616,6 @@ function startTimerInterval() {
 
     if (timerSecondsLeft > 0) {
       timerSecondsLeft -= 1;
-
-      if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
-        youtubeMaxWatchedSeconds = Math.max(
-          youtubeMaxWatchedSeconds,
-          youtubePlayer.getCurrentTime()
-        );
-      }
-
       updateTimerDisplay();
     }
 
@@ -1630,23 +1646,26 @@ function startTimerInterval() {
 
 function onPlayerReady(event) {
   const player = event.target;
-  
+
+  // Start forward-seeking protection only after the YouTube
+  // player has been created and is ready.
+  startForwardSeekProtection();
+
   // Aggressive ad-skipping with multiple selector attempts
   const skipAdsInterval = setInterval(() => {
     try {
-      // Try multiple selectors for the skip button (YouTube changes these)
-      const skipButton = 
+      const skipButton =
         document.querySelector('.ytp-ad-skip-button') ||
         document.querySelector('button.ytp-ad-skip-button-modern') ||
         document.querySelector('.ytp-ad-skip-button-modern') ||
         document.querySelector('[aria-label="Skip ad"]') ||
         document.querySelector('[aria-label="Skip Ad"]') ||
-        Array.from(document.querySelectorAll('button')).find(btn => 
-          btn.textContent.includes('Skip') && btn.offsetParent !== null
+        Array.from(document.querySelectorAll('button')).find(btn =>
+          btn.textContent.includes('Skip') &&
+          btn.offsetParent !== null
         );
-      
+
       if (skipButton && skipButton.offsetParent !== null) {
-        // Button exists and is visible
         skipButton.click();
         console.log('Ad skipped');
         clearInterval(skipAdsInterval);
@@ -1654,7 +1673,7 @@ function onPlayerReady(event) {
     } catch (e) {
       // Silent fail
     }
-  }, 300); // Check more frequently (every 300ms instead of 500ms)
+  }, 300);
 
   // Stop checking after 20 seconds
   setTimeout(() => clearInterval(skipAdsInterval), 20000);
@@ -1676,13 +1695,15 @@ function createYouTubePlayer(videoId, startSeconds) {
 
   youtubePlayer = new YT.Player('youtube-player', {
     videoId: videoId,
-    playerVars: {
-      autoplay: 0,
-      controls: 1,
-      start: startSeconds,
-      modestbranding: 1,
-      rel: 0  // ← Disables related videos
-    },
+   playerVars: {
+  autoplay: 0,
+  controls: 0,
+  disablekb: 1,
+  fs: 0,
+  start: startSeconds,
+  modestbranding: 1,
+  rel: 0
+},
     events: {
       onStateChange: onYouTubeStateChange,
       onReady: onPlayerReady
@@ -1722,6 +1743,8 @@ function openModule(moduleId) {
   const resumeElapsed = isResuming ? Math.min(resumeState.elapsedSeconds, timerTotalSeconds) : 0;
   const videoStartSeconds = unitStartSeconds + resumeElapsed;
 
+stopForwardSeekProtection();
+
 if (youtubePlayer) {
   youtubePlayer.destroy();
   youtubePlayer = null;
@@ -1742,8 +1765,13 @@ if (!videoId) {
   createYouTubePlayer(videoId, videoStartSeconds);
 }
 
+startForwardSeekProtection();   
+
 youtubeMaxWatchedSeconds = videoStartSeconds;
+
 timerSecondsLeft = timerTotalSeconds - resumeElapsed;
+timerRunning = false;
+clearInterval(timerInterval);
 timerRunning = false;
 clearInterval(timerInterval);
 
@@ -1852,18 +1880,16 @@ function updateTimerDisplay() {
 
 $('btn-timer-start').addEventListener('click', () => {
   if (timerRunning) return;
-  
-  // ✅ Mark that user requested playback
-  // Actual timer starts in onYouTubeStateChange when video really plays
+
   $('btn-timer-start').dataset.playRequested = 'true';
-  
+
   if (youtubePlayer && typeof youtubePlayer.playVideo === 'function') {
     youtubePlayer.playVideo();
-    // Correct immediately if they seeked forward while paused
+
+    // Correct a forward seek made while the video was paused.
     checkYouTubeSkip();
   }
-  
-  // Show pause button immediately (will hide if ad detected)
+
   $('btn-timer-start').style.display = 'none';
   $('btn-timer-pause').style.display = 'inline-block';
 });
@@ -1877,6 +1903,9 @@ $('btn-timer-pause').addEventListener('click', () => {
     youtubePlayer.pauseVideo();
   }
 
+  // Immediately correct any forward seek made before pausing.
+  checkYouTubeSkip();
+
   timerRunning = false;
   clearInterval(timerInterval);
 
@@ -1887,7 +1916,10 @@ $('btn-timer-pause').addEventListener('click', () => {
 
 $('btn-complete-module').addEventListener('click', async () => {
   if (reviewMode) return; // safety net — button is hidden in review mode anyway
+
+  stopForwardSeekProtection();
   clearInterval(timerInterval);
+
   $('btn-complete-module').disabled = true;
   $('btn-complete-module').textContent = 'Saving…';
 
