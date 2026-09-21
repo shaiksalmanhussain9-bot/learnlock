@@ -1695,7 +1695,7 @@ function createYouTubePlayer(videoId, startSeconds) {
 
   youtubePlayer = new YT.Player('youtube-player', {
     videoId: videoId,
-   playerVars: {
+  playerVars: {
   autoplay: 0,
   controls: 0,
   disablekb: 1,
