@@ -285,7 +285,7 @@ a:focus-visible {
 
 .course-info {
   flex: 1;
-  min-width: 0;
+  min-width: 200px;
 }
 
 .course-name {
@@ -293,6 +293,10 @@ a:focus-visible {
   font-size: 17px;
   font-weight: 600;
   overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+  flex: 1;
+  min-width: 200px;
 }
 
 .course-meta {
