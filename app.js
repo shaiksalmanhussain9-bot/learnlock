@@ -1479,23 +1479,32 @@ function isAdPlaying() {
 }
 
 function checkYouTubeSkip() {
-  if (!youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') {
+  if (
+    reviewMode ||
+    !youtubePlayer ||
+    typeof youtubePlayer.getCurrentTime !== 'function'
+  ) {
     return false;
   }
 
   const currentTime = youtubePlayer.getCurrentTime();
 
-if (currentTime > youtubeMaxWatchedSeconds + 2) {
-  youtubePlayer.seekTo(youtubeMaxWatchedSeconds, true);
-  return true;
-}
+  // Small tolerance prevents false corrections caused by YouTube's
+  // normal timing differences.
+  const allowedTime = youtubeMaxWatchedSeconds + 1;
 
-youtubeMaxWatchedSeconds = Math.max(
-  youtubeMaxWatchedSeconds,
-  currentTime
-);
+  if (currentTime > allowedTime) {
+    youtubePlayer.seekTo(youtubeMaxWatchedSeconds, true);
+    return true;
+  }
 
-return false;
+  // Only increase the allowed position when the video naturally reaches it.
+  youtubeMaxWatchedSeconds = Math.max(
+    youtubeMaxWatchedSeconds,
+    currentTime
+  );
+
+  return false;
 }
 
 // ===========================================================
