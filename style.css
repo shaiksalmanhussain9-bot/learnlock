@@ -1069,12 +1069,25 @@ a:focus-visible {
   border: 1px solid var(--line);
   border-radius: 8px;
   width: 100%;
+  min-width: 280px;
+}
+
+.course-share-panel strong {
+  display: block;
+  word-break: break-word;
+  white-space: normal;
+  max-width: 100%;
+  width: 100%;
 }
 
 .course-share-panel p {
   margin: 0 0 8px;
   font-size: 14px;
   color: var(--text);
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .friend-email-share {
@@ -1109,13 +1122,7 @@ a:focus-visible {
 .cancel-share:hover {
   color: var(--text);
 }
-.course-share-panel strong {
-  display: block;
-  word-break: break-word;
-  white-space: normal;
-  max-width: none;
-  width: auto;
-}
+
 /* ---------- Video player (responsive at every screen size) ---------- */
 .youtube-player-wrap {
   width: 100%;
