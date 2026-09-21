@@ -1,12 +1,5 @@
 /* ===========================================================
    LEARNLOCK — app.js (FIXED VERSION)
-   
-   CHANGES APPLIED:
-   1. ✅ Updated onYouTubeStateChange() - Ad detection + timer control
-   2. ✅ Added startTimerInterval() - Separated timer logic with safety
-   3. ✅ Updated btn-timer-start click handler - Deferred start approach
-   4. ✅ Verified btn-timer-pause handler - Already correct
-   
    All the app's behavior lives here. Read the comments — they
    explain what each part does, since you're new to coding.
 =========================================================== */
@@ -22,8 +15,6 @@ const REWARDS = [
   { points: 5000, icon: '👑', label: '5,000 XP Reward' }
 ];
 
-// One-time bonus for reaching each streak length. If the streak ever
-// resets to 0, these become re-earnable — see loadUserStats().
 const STREAK_MILESTONES = [
   { days: 3, bonus: 50 },
   { days: 7, bonus: 150 },
@@ -31,11 +22,8 @@ const STREAK_MILESTONES = [
   { days: 30, bonus: 2000 },
 ];
 
-// XP needed to go from one level to the next (flat — level 2 needs
-// 500 XP total, level 3 needs 1000, etc).
 const LEVEL_XP_STEP = 500;
 
-// Titles shown at and after the given level, until the next one.
 const LEVEL_TITLES = [
   { level: 1, icon: '🌱', title: 'Beginner' },
   { level: 2, icon: '📖', title: 'Learner' },
@@ -50,7 +38,6 @@ const LEVEL_TITLES = [
   { level: 50, icon: '💎', title: 'Knowledge Legend' },
 ];
 
-// Converts a raw XP total into { level, xpIntoLevel, xpForNext, icon, title }.
 function getLevelInfo(xp) {
   const level = Math.floor(xp / LEVEL_XP_STEP) + 1;
   const xpIntoLevel = xp % LEVEL_XP_STEP;
@@ -69,25 +56,19 @@ const ACHIEVEMENTS = [
   { id: 'hundred_modules', icon: '💯', label: '100 modules completed', check: (s) => s.modulesCompleted >= 100, progress: (s) => ({ current: Math.min(s.modulesCompleted, 100), target: 100 }) },
 ];
 
-// Set briefly when a missed-day streak event happens (saved or reset),
-// so we can show one toast about it right after the dashboard loads.
 let pendingStreakToast = null;
 
-
-
-// ---------- App state (kept in memory while the page is open) ----------
 let currentUser = null;
-let userStats = null;      // { points, streak, lastActiveDate, modulesCompleted, coursesCompleted, achievements }
-let coursesCache = [];     // list of course docs for the logged-in user
+let userStats = null;
+let coursesCache = [];
 let activeCourseId = null;
 let activeModuleId = null;
-let activeSubModuleId = null; // set when the current module has sub-modules
-let reviewMode = false; // true when watching a COMPLETED unit again — no completion, no resume tracking
+let activeSubModuleId = null;
+let reviewMode = false;
 let isSignupMode = false;
-let activeCourseType = 'personal'; // 'personal' or 'shared'
+let activeCourseType = 'personal';
 let sharedCoursesCache = [];
 
-// Timer state
 let timerSecondsLeft = 0;
 let timerTotalSeconds = 0;
 let timerInterval = null;
@@ -97,9 +78,7 @@ let youtubeMaxWatchedSeconds = 0;
 let youtubeSeekProtectionInterval = null;
 let youtubeAPIReady = false;
 let pendingYouTubeRequest = null;
-let currentCourseVideoId = null; // the actual course video's YouTube ID, used to tell it apart from ads
-
-// ---------- Small helpers ----------
+let currentCourseVideoId = null;
 
 function $(id) { return document.getElementById(id); }
 
@@ -116,10 +95,6 @@ function toast(message) {
   toast._t = setTimeout(() => el.classList.remove('show'), 3200);
 }
 
-// Builds a "YYYY-MM-DD" string from LOCAL date parts. We deliberately
-// avoid toISOString() here — it converts to UTC first, which silently
-// shifts the date for anyone not in UTC (e.g. India is UTC+5:30, so
-// toISOString() can report "yesterday" during early morning hours).
 function toLocalDateStr(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -153,29 +128,19 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-// ===========================================================
-// RESUME STATE — lets a module pick up where you left off if you
-// close the browser and come back within 24 hours. Stored in this
-// browser's localStorage (not Firestore) so it saves instantly and
-// reliably at the exact moment the tab/browser closes.
-// ===========================================================
-
-const RESUME_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+const RESUME_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 function resumeStorageKey() {
   return currentUser ? `learnlock_resume_${currentUser.uid}` : null;
 }
 
-// Called right as the page is closing/unloading. Saves how far into
-// the current module the user got, IF a module is actually open and
-// partway through.
 function saveResumeState() {
   const key = resumeStorageKey();
   if (!key || !activeModuleId || reviewMode) return;
-  if (!timerTotalSeconds || timerSecondsLeft <= 0) return; // nothing to resume
+  if (!timerTotalSeconds || timerSecondsLeft <= 0) return;
 
   const elapsedSeconds = timerTotalSeconds - timerSecondsLeft;
-  if (elapsedSeconds <= 0) return; // hadn't started yet, nothing to save
+  if (elapsedSeconds <= 0) return;
 
   const state = {
     courseId: activeCourseId,
@@ -188,13 +153,9 @@ function saveResumeState() {
 
   try {
     localStorage.setItem(key, JSON.stringify(state));
-  } catch (e) {
-    // Storage full or unavailable — safe to ignore, resume just won't work.
-  }
+  } catch (e) {}
 }
 
-// Returns the saved resume state if one exists and is still within
-// the 24-hour window, otherwise null (and clears it if expired).
 function loadResumeState() {
   const key = resumeStorageKey();
   if (!key) return null;
@@ -223,13 +184,8 @@ function clearResumeState() {
   try { localStorage.removeItem(key); } catch (e) {}
 }
 
-// Save right as the browser/tab is actually closing.
 window.addEventListener('beforeunload', saveResumeState);
 window.addEventListener('pagehide', saveResumeState);
-
-// ===========================================================
-// AUTH
-// ===========================================================
 
 $('auth-toggle-btn').addEventListener('click', () => {
   isSignupMode = !isSignupMode;
@@ -302,9 +258,6 @@ function friendlyAuthError(err) {
 
 $('logout-btn').addEventListener('click', () => auth.signOut());
 
-// Loads everything the dashboard needs, showing a loading state while
-// it works and a retryable error state if anything fails (e.g. no
-// network connection).
 async function loadAndShowDashboard() {
   showView('loading');
   try {
@@ -337,10 +290,6 @@ auth.onAuthStateChanged(async (user) => {
   }
 });
  
-// ===========================================================
-// USER STATS (points, streak, achievements)
-// ===========================================================
-
 async function loadUserStats() {
     await db.collection('userLookup')
     .doc(currentUser.email.toLowerCase())
@@ -355,8 +304,6 @@ async function loadUserStats() {
     if (userStats.streakMilestones === undefined) userStats.streakMilestones = [];
     if (userStats.activeDates === undefined) userStats.activeDates = [];
      if (userStats.learningSessions === undefined) userStats.learningSessions = [];
-    // Old field from the previous lock-based system — no longer used,
-    // but harmless to leave if it exists on old accounts.
     delete userStats.missedDay;
     delete userStats.challenges;
 
@@ -365,9 +312,6 @@ async function loadUserStats() {
       daysBetween(userStats.lastActiveDate, todayStr()) > 1 &&
       userStats.streak > 0
     ) {
-      // Missed a day. If there are enough points saved up, auto-spend
-      // them to keep the streak exactly where it was. Otherwise the
-      // streak resets to 0 — but learning is never locked either way.
       if (userStats.points >= STREAK_RECOVERY_COST) {
         userStats.points -= STREAK_RECOVERY_COST;
         pendingStreakToast = `🔥 Missed a day, but ${STREAK_RECOVERY_COST} XP kept your ${userStats.streak}-day streak alive!`;
@@ -404,7 +348,6 @@ async function saveUserStats() {
 function registerCompletionForStreak() {
   const today = todayStr();
   if (userStats.lastActiveDate === today) {
-    // already logged activity today — streak unchanged
   } else if (userStats.lastActiveDate && daysBetween(userStats.lastActiveDate, today) === 1) {
     userStats.streak += 1;
   } else {
@@ -424,9 +367,6 @@ function checkNewAchievements() {
   return newlyEarned;
 }
 
-// Checks if the current streak just crossed a milestone (3/7/15/30
-// days) and awards the one-time bonus if so. Called right after a
-// streak increments from completing a module.
 function checkStreakMilestones() {
   if (!userStats.streakMilestones) userStats.streakMilestones = [];
   const newlyReached = [];
@@ -458,12 +398,10 @@ function checkNewRewards() {
   return newlyEarned;
 }
 
-// ============ RENDER BADGES (FIXED) ============
 function renderBadges(badges, containerId) {
   const container = $(containerId);
   if (!container) return;
 
-  // Safety check: ensure badges is an array
   if (!badges || !Array.isArray(badges)) {
     container.innerHTML = '';
     return;
@@ -472,10 +410,8 @@ function renderBadges(badges, containerId) {
   container.innerHTML = '';
 
   badges.forEach(badge => {
-    // Skip undefined or invalid badges
     if (!badge || typeof badge !== 'object') return;
     
-    // Check that badge has required properties
     if (!badge.icon || !badge.label) return;
 
     const badgeEl = document.createElement('div');
@@ -488,9 +424,6 @@ function renderBadges(badges, containerId) {
   });
 }
 
-// Shows each streak milestone (3/7/15/30 days) as a locked card with
-// live progress ("2/3 days") until it's reached, then flips to an
-// unlocked, celebratory card once the bonus has been claimed.
 function renderStreakMilestones() {
   const row = $('streak-milestone-row');
   if (!row) return;
@@ -520,8 +453,6 @@ function renderStreakMilestones() {
   });
 }
 
-// Finds the first available module (or current sub-module) across the
-// user's active personal courses — the thing they'd naturally do next.
 function findNextLearningTarget() {
   const course = coursesCache.find(c => !c.completed && c.modules.some(m => m.status === 'available'));
   if (!course) return null;
@@ -578,10 +509,6 @@ function renderLevelBanner() {
     <div class="level-xp-text">${info.xpIntoLevel} / ${info.xpForNext} XP to Level ${info.level + 1}</div>
   `;
 }
-
-// ===========================================================
-// COURSES
-// ===========================================================
 
 function coursesRef() {
   return db.collection('users').doc(currentUser.uid).collection('courses');
@@ -666,9 +593,6 @@ async function openSharePicker(courseId) {
   await showSharePanel(course, courseId);
 }
 
-// Builds and attaches the friend-picker panel under the given card.
-// courseLike needs { id, name, source, modules }; anchorId must match
-// the data-course-id on the DOM element to attach the panel to.
 async function showSharePanel(courseLike, anchorId) {
   const friends = await getFriendsList();
   if (friends.length === 0) { toast('Add a friend first before sharing a course.'); return; }
@@ -676,7 +600,6 @@ async function showSharePanel(courseLike, anchorId) {
   const anchorItem = document.querySelector(`.course-item[data-course-id="${anchorId}"]`);
   if (!anchorItem) return;
 
-  // Only one share panel open at a time.
   document.querySelectorAll('.course-share-panel').forEach(p => p.remove());
 
   const panel = document.createElement('div');
@@ -720,8 +643,6 @@ async function shareCourseWithFriend(course, friend) {
     status: i === 0 ? 'available' : 'locked'
   }));
 
-  // One fixed document per (course, friend) pair — repeated clicks
-  // can't create duplicate invites.
   const shareId = `${course.id}_${friend.uid}`;
   const shareRef = db.collection('sharedCourses').doc(shareId);
 
@@ -734,9 +655,6 @@ async function shareCourseWithFriend(course, friend) {
     }
   }
 
-  // Status starts as 'pending' — the friend has to accept before this
-  // becomes a live shared course. invitedBy records who sent it, so we
-  // can tell "invites I sent" apart from "invites I received."
   try {
     await shareRef.set({
       courseId: course.id,
@@ -796,9 +714,6 @@ function closeCourseMenus() {
   });
 }
 
-// Builds the "⋮" menu (Share / Delete) attached to a course card.
-// Generic ⋮ menu builder — used for both personal and shared courses,
-// each passing in their own Share/Remove actions.
 function createGenericCourseMenu(shareLabel, removeLabel, onShare, onRemove) {
   const wrapper = document.createElement('div');
   wrapper.className = 'course-menu-wrap';
@@ -863,8 +778,6 @@ function createSharedCourseMenu(sharedId) {
   );
 }
 
-// Shares a course you're already learning WITH a friend, out to one
-// more friend — reuses your own current progress as the template.
 async function openSharePickerForShared(sharedId) {
   const sc = sharedCoursesCache.find(c => c.id === sharedId);
   if (!sc) return;
@@ -879,8 +792,6 @@ async function openSharePickerForShared(sharedId) {
   await showSharePanel(courseLike, sharedId);
 }
 
-// Removes a shared course entirely (for either participant — cleans up
-// duplicates or courses you no longer want to see).
 async function deleteSharedCourse(sharedId) {
   const sc = sharedCoursesCache.find(c => c.id === sharedId);
   if (!sc) return;
@@ -904,10 +815,8 @@ async function deleteSharedCourse(sharedId) {
   }
 }
 
-// Close any open course menu when clicking anywhere else on the page.
 document.addEventListener('click', () => closeCourseMenus());
 
-// Called when the RECIPIENT of a course invite clicks Accept or Reject.
 async function respondToCourseInvite(sharedId, accept) {
   if (accept) {
     await db.collection('sharedCourses').doc(sharedId).update({ status: 'accepted' });
@@ -920,8 +829,6 @@ async function respondToCourseInvite(sharedId, accept) {
   renderDashboard();
 }
 
-// Shows invites where someone ELSE shared a course with me, and I
-// haven't responded yet.
 function renderIncomingCourseInvites() {
   const list = $('incoming-invites-list');
   if (!list) return;
@@ -951,7 +858,6 @@ function renderIncomingCourseInvites() {
   });
 }
 
-// Shows invites I sent that are still waiting on the other person.
 function renderOutgoingCourseInvites() {
   const list = $('outgoing-invites-list');
   if (!list) return;
@@ -1066,8 +972,6 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
-// ---------- Course builder ----------
-
 $('btn-new-course').addEventListener('click', () => {
   if (activeCourseCount() >= MAX_ACTIVE_COURSES) {
     toast(`You've hit the ${MAX_ACTIVE_COURSES}-course limit. Finish or remove one before adding another — it keeps you focused.`);
@@ -1165,10 +1069,6 @@ $('btn-create-plan').addEventListener('click', async () => {
 
     if (subModules.length > 0) {
       m.subModules = subModules;
-      // When sub-modules exist, they're authoritative for timing — the
-      // module's own Start/End fields default to 00:00:00 and aren't a
-      // reliable signal of "user meant this," so always derive from
-      // the sub-modules instead.
       if (!m.name) m.name = subModules[0].name;
       m.startTime = subModules[0].startTime;
       m.endTime = subModules[subModules.length - 1].endTime;
@@ -1222,15 +1122,10 @@ $('btn-create-plan').addEventListener('click', async () => {
   openCoursePath(docRef.id);
 });
 
-// ===========================================================
-// LEARNING PATH (the locked/unlocked day sequence)
-// ===========================================================
-
 function getCourse(courseId) {
   return coursesCache.find(c => c.id === courseId);
 }
 
-// ============ OPEN PATH ============
 function openPath(courseId) {
   const course = userCourses.find(c => c.id === courseId);
   if (!course) return;
@@ -1293,18 +1188,11 @@ function openPath(courseId) {
   showView('view-path');
 }
 
-// If a module has sub-modules, returns the first one that isn't
-// completed yet (the one the user should be on). Returns null for
-// modules with no sub-modules — meaning "operate on the module itself,
-// exactly like before."
 function getCurrentSubModule(mod) {
   if (!mod.subModules || mod.subModules.length === 0) return null;
   return mod.subModules.find(s => s.status === 'available') || null;
 }
 
-// Resolves the actual unit currently being watched — the active
-// sub-module if one is set, otherwise the module itself. Used by the
-// timer/YouTube end-boundary checks so they stop at the right point.
 function getActiveUnit(course) {
   const mod = course.modules.find(m => m.id === activeModuleId);
   if (!mod) return null;
@@ -1349,9 +1237,6 @@ function renderPath() {
       ? `${mod.subModules.filter(s => s.status === 'completed').length}/${mod.subModules.length} sub-modules complete`
       : `${mod.startTime} → ${mod.endTime}`;
 
-    // Check if the unit the user would open right now (the module
-    // itself, or its current sub-module) has a resumable session from
-    // within the last 24 hours.
     const resumeState = mod.status === 'available' ? loadResumeState() : null;
     const isResumable = resumeState
       && resumeState.courseId === activeCourseId
@@ -1359,9 +1244,6 @@ function renderPath() {
       && resumeState.moduleId === mod.id
       && resumeState.subModuleId === (currentSub ? currentSub.id : null);
 
-    // Build a visible list of each individual sub-module (1.1, 1.2...)
-    // with its own status, so the user can see what's inside, not just
-    // a "0/3 complete" count. Completed ones get a Watch again button.
     const subListHtml = hasSubModules
       ? `<div class="submodule-progress-list">${mod.subModules.map((s, si) => {
           const subIcon = s.status === 'completed' ? '✓' : s.status === 'available' ? '▶' : '🔒';
@@ -1376,8 +1258,6 @@ function renderPath() {
         }).join('')}</div>`
       : '';
 
-    // A completed module with NO sub-modules also gets its own
-    // Watch again button.
     const rewatchModuleBtn = (mod.status === 'completed' && !hasSubModules)
       ? `<button class="btn-rewatch" data-mod="${mod.id}">▶ Watch again</button>`
       : '';
@@ -1409,11 +1289,6 @@ function renderPath() {
   });
 }
 
-// ===========================================================
-// MODULE DASHBOARD (countdown timer + completion)
-// ===========================================================
-
-// YouTube calls this automatically when the IFrame API finishes loading
 window.onYouTubeIframeAPIReady = function () {
   youtubeAPIReady = true;
 
@@ -1465,9 +1340,6 @@ function extractYouTubeId(url) {
   return null;
 }
 
-// True when the player is currently showing something other than the
-// actual course video (i.e. an ad) — used to keep the countdown timer
-// from running during ads. Doesn't touch the ad in any way.
 function isAdPlaying() {
   if (!youtubePlayer || typeof youtubePlayer.getVideoData !== 'function') return false;
   try {
@@ -1475,7 +1347,7 @@ function isAdPlaying() {
     if (!data || !data.video_id) return false;
     return currentCourseVideoId && data.video_id !== currentCourseVideoId;
   } catch (e) {
-    return false; // if we can't tell, assume it's fine rather than getting stuck
+    return false;
   }
 }
 
@@ -1490,8 +1362,6 @@ function checkYouTubeSkip() {
 
   const currentTime = youtubePlayer.getCurrentTime();
 
-  // Small tolerance prevents false corrections caused by normal
-  // YouTube timing differences.
   const allowedTime = youtubeMaxWatchedSeconds + 1;
 
   if (currentTime > allowedTime) {
@@ -1499,7 +1369,6 @@ function checkYouTubeSkip() {
     return true;
   }
 
-  // Increase the allowed position only when the video moves naturally.
   youtubeMaxWatchedSeconds = Math.max(
     youtubeMaxWatchedSeconds,
     currentTime
@@ -1531,17 +1400,22 @@ function stopForwardSeekProtection() {
   }
 }
 
-// ===========================================================
-// ✅ CHANGE #1: UPDATED onYouTubeStateChange() FUNCTION
-// ===========================================================
-// KEY FIXES:
-// 1. Checks if ad is playing FIRST
-// 2. Stops timer if ad starts
-// 3. Only starts timer when video confirmed + playRequested set
-// ===========================================================
+// Shows/hides a cover over the video whenever it's paused, so YouTube's
+// own "more videos" suggestion panel (which YouTube shows automatically
+// on pause and can't be turned off via player settings) is hidden and
+// un-clickable. The cover only ever appears while paused; playing
+// (course video OR an ad) always hides it again.
+function showPauseShield() {
+  const shield = $('youtube-pause-shield');
+  if (shield) shield.classList.remove('hidden');
+}
+
+function hidePauseShield() {
+  const shield = $('youtube-pause-shield');
+  if (shield) shield.classList.add('hidden');
+}
 
 function onYouTubeStateChange(event) {
-  // Auto-skip ads more aggressively
   if (event.data === YT.PlayerState.UNSTARTED) {
     try {
       let skipBtn = document.querySelector('.ytp-ad-skip-button');
@@ -1551,10 +1425,10 @@ function onYouTubeStateChange(event) {
   }
 
   if (event.data === YT.PlayerState.PLAYING) {
-    // 🔴 CRITICAL: CHECK IF AN AD IS PLAYING FIRST
+    hidePauseShield(); // playing — whether it's the course video or an ad, no cover needed
+
     if (isAdPlaying()) {
       $('timer-label').textContent = '⏸ Ad playing — timer paused';
-      // Stop timer if it's running during an ad
       if (timerRunning) {
         timerRunning = false;
         clearInterval(timerInterval);
@@ -1562,11 +1436,9 @@ function onYouTubeStateChange(event) {
         $('btn-timer-start').style.display = 'inline-block';
         $('btn-timer-start').textContent = '▶ Resume';
       }
-      return; // Don't start timer while ad is showing
+      return;
     }
 
-    // ✅ ACTUAL COURSE VIDEO IS PLAYING
-    // Start timer only when user requested play AND video is actually playing
     if (timerSecondsLeft > 0 && !timerRunning && $('btn-timer-start').dataset.playRequested === 'true') {
       startTimerInterval();
       $('btn-timer-start').dataset.playRequested = 'false';
@@ -1574,6 +1446,8 @@ function onYouTubeStateChange(event) {
   }
 
   if (event.data === YT.PlayerState.PAUSED) {
+    showPauseShield(); // paused — cover the video so YouTube's suggestion panel can't be seen/clicked
+
     if (timerRunning) {
       timerRunning = false;
       clearInterval(timerInterval);
@@ -1585,13 +1459,6 @@ function onYouTubeStateChange(event) {
   }
 }
 
-// ===========================================================
-// ✅ CHANGE #2: NEW startTimerInterval() FUNCTION
-// ===========================================================
-// Separated timer logic with safety checks
-// Checks for ads every tick
-// ===========================================================
-
 function startTimerInterval() {
   timerRunning = true;
   $('btn-timer-start').style.display = 'none';
@@ -1599,7 +1466,6 @@ function startTimerInterval() {
   $('timer-label').textContent = 'Time remaining';
 
   timerInterval = setInterval(() => {
-    // 🔴 SAFETY CHECK: If an ad starts playing, pause timer immediately
     if (isAdPlaying()) {
       $('timer-label').textContent = '⏸ Ad playing — timer paused';
       timerRunning = false;
@@ -1647,11 +1513,8 @@ function startTimerInterval() {
 function onPlayerReady(event) {
   const player = event.target;
 
-  // Start forward-seeking protection only after the YouTube
-  // player has been created and is ready.
   startForwardSeekProtection();
 
-  // Aggressive ad-skipping with multiple selector attempts
   const skipAdsInterval = setInterval(() => {
     try {
       const skipButton =
@@ -1670,17 +1533,14 @@ function onPlayerReady(event) {
         console.log('Ad skipped');
         clearInterval(skipAdsInterval);
       }
-    } catch (e) {
-      // Silent fail
-    }
+    } catch (e) {}
   }, 300);
 
-  // Stop checking after 20 seconds
   setTimeout(() => clearInterval(skipAdsInterval), 20000);
 }
 
 function createYouTubePlayer(videoId, startSeconds) {
-  currentCourseVideoId = videoId; // remember this so we can detect ads later
+  currentCourseVideoId = videoId;
   const container = $('youtube-player');
 
   if (!videoId) return;
@@ -1695,15 +1555,17 @@ function createYouTubePlayer(videoId, startSeconds) {
 
   youtubePlayer = new YT.Player('youtube-player', {
     videoId: videoId,
-  playerVars: {
-  autoplay: 0,
-  controls: 0,
-  disablekb: 1,
-  fs: 0,
-  start: startSeconds,
-  modestbranding: 1,
-  rel: 0
-},
+    playerVars: {
+      autoplay: 0,
+      controls: 1,       // show native controls (settings gear, captions, fullscreen)
+      disablekb: 1,       // block keyboard seek shortcuts (arrow keys, etc.)
+      fs: 1,              // enable the fullscreen button
+      cc_load_policy: 0,  // don't force captions on, but the CC toggle still shows if captions exist
+      iv_load_policy: 3,  // hide video annotations/cards
+      rel: 0,              // related videos limited to the same channel only
+      start: startSeconds,
+      modestbranding: 1
+    },
     events: {
       onStateChange: onYouTubeStateChange,
       onReady: onPlayerReady
@@ -1718,9 +1580,6 @@ function openModule(moduleId) {
   const mod = course.modules.find(m => m.id === moduleId);
   const dayIndex = course.modules.findIndex(m => m.id === moduleId);
 
-  // If this module has sub-modules, we operate on the current
-  // (first-incomplete) one instead of the module's own times. A
-  // module with no sub-modules behaves exactly as before.
   const currentSub = getCurrentSubModule(mod);
   activeSubModuleId = currentSub ? currentSub.id : null;
   const unit = currentSub || mod;
@@ -1728,9 +1587,6 @@ function openModule(moduleId) {
   $('module-day-tag').textContent = `Day ${dayIndex + 1}${currentSub ? ` · ${currentSub.name}` : ''}`;
   $('module-title').textContent = currentSub ? `${mod.name} — ${currentSub.name}` : mod.name;
 
-  // Check whether we're resuming a session left off within the last
-  // 24 hours (same module AND same sub-module, same course) — if so,
-  // pick up from there instead of starting at 0.
   const resumeState = loadResumeState();
   const isResuming = resumeState
     && resumeState.courseId === activeCourseId
@@ -1772,12 +1628,12 @@ youtubeMaxWatchedSeconds = videoStartSeconds;
 timerSecondsLeft = timerTotalSeconds - resumeElapsed;
 timerRunning = false;
 clearInterval(timerInterval);
-timerRunning = false;
-clearInterval(timerInterval);
 
 if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
   youtubePlayer.pauseVideo();
 }
+
+showPauseShield(); // module opens paused, so keep the shield up until Start/Continue is pressed
 
 updateTimerDisplay();
 $('btn-timer-start').style.display = 'inline-block';
@@ -1792,9 +1648,6 @@ showView('module');
 monitorAndSkipAds();
 }
 
-// Opens a COMPLETED module or sub-module again, purely to rewatch it.
-// Doesn't touch progress, XP, or the resume-within-24h state — it's
-// just a video player pointed at that unit's own start/end range.
 function openModuleForReview(moduleId, subModuleId) {
   reviewMode = true;
   activeModuleId = moduleId;
@@ -1830,8 +1683,6 @@ function openModuleForReview(moduleId, subModuleId) {
   }
 
   timerTotalSeconds = unitEndSeconds - unitStartSeconds;
-  // Already fully "watched" — this disables the forward-skip lock so
-  // the user can freely scrub anywhere within this replay.
   youtubeMaxWatchedSeconds = unitEndSeconds;
   timerSecondsLeft = 0;
   timerRunning = false;
@@ -1840,6 +1691,8 @@ function openModuleForReview(moduleId, subModuleId) {
   if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
     youtubePlayer.pauseVideo();
   }
+
+  showPauseShield();
 
   $('timer-display').textContent = formatTime(timerTotalSeconds);
   $('timer-display').classList.remove('done');
@@ -1869,15 +1722,6 @@ function updateTimerDisplay() {
   }
 }
 
-// ===========================================================
-// ✅ CHANGE #3: UPDATED btn-timer-start CLICK HANDLER
-// ===========================================================
-// KEY CHANGES:
-// 1. Set playRequested = 'true' instead of starting timer immediately
-// 2. Call playVideo() but DON'T start interval
-// 3. Let onYouTubeStateChange handler verify and start timer
-// ===========================================================
-
 $('btn-timer-start').addEventListener('click', () => {
   if (timerRunning) return;
 
@@ -1885,8 +1729,6 @@ $('btn-timer-start').addEventListener('click', () => {
 
   if (youtubePlayer && typeof youtubePlayer.playVideo === 'function') {
     youtubePlayer.playVideo();
-
-    // Correct a forward seek made while the video was paused.
     checkYouTubeSkip();
   }
 
@@ -1894,16 +1736,11 @@ $('btn-timer-start').addEventListener('click', () => {
   $('btn-timer-pause').style.display = 'inline-block';
 });
 
-// ===========================================================
-// ✅ CHANGE #4: btn-timer-pause HANDLER (Already Correct)
-// ===========================================================
-
 $('btn-timer-pause').addEventListener('click', () => {
   if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
     youtubePlayer.pauseVideo();
   }
 
-  // Immediately correct any forward seek made before pausing.
   checkYouTubeSkip();
 
   timerRunning = false;
@@ -1915,7 +1752,7 @@ $('btn-timer-pause').addEventListener('click', () => {
 });
 
 $('btn-complete-module').addEventListener('click', async () => {
-  if (reviewMode) return; // safety net — button is hidden in review mode anyway
+  if (reviewMode) return;
 
   stopForwardSeekProtection();
   clearInterval(timerInterval);
@@ -1928,11 +1765,6 @@ $('btn-complete-module').addEventListener('click', async () => {
   const idx = modules.findIndex(m => m.id === activeModuleId);
   const mod = modules[idx];
 
-  // ---- SUB-MODULE BRANCH ----
-  // If we're on a sub-module that isn't the last one, just mark it
-  // done, move to the next sub-module, and stop — no XP, streak, or
-  // achievements yet. Those only happen when the module's LAST
-  // sub-module is completed (handled by falling through below).
   if (activeSubModuleId) {
     const subIdx = mod.subModules.findIndex(s => s.id === activeSubModuleId);
     mod.subModules[subIdx].status = 'completed';
@@ -1953,13 +1785,9 @@ $('btn-complete-module').addEventListener('click', async () => {
       await loadCourses();
       await loadSharedCourses();
       toast(`✓ "${mod.subModules[subIdx].name}" complete — next: ${mod.subModules[subIdx + 1].name}`);
-      openModule(activeModuleId); // reopens straight into the next sub-module
+      openModule(activeModuleId);
       return;
     }
-    // This WAS the last sub-module — fall through to the normal
-    // module-completion flow below, exactly like a module with no
-    // sub-modules at all. mod.subModules is already updated above,
-    // and it's part of `modules`, so it'll be saved along with it.
   }
 
   clearResumeState();
@@ -1973,8 +1801,6 @@ $('btn-complete-module').addEventListener('click', async () => {
   }
 
   if (activeCourseType === 'shared') {
-    // Shared courses live in a top-level collection, keyed by each
-    // participant's own progress array — only update MY progress.
     await db.collection('sharedCourses').doc(activeCourseId).update({
       [`progress.${currentUser.uid}`]: modules
     });
@@ -1999,7 +1825,6 @@ $('btn-complete-module').addEventListener('click', async () => {
     userStats.activeDates.push(todayForCalendar);
   }
 
-   // Track the learning session for the calendar
 const unit = activeSubModuleId 
   ? (mod.subModules || []).find(s => s.id === activeSubModuleId) 
   : mod;
@@ -2057,10 +1882,6 @@ if (unit) {
     showView('path');
   }
 });
-
-// ===========================================================
-// FRIENDS
-// ===========================================================
 
 $('btn-add-friend').addEventListener('click', async () => {
   const email = $('friend-email-input').value.trim().toLowerCase();
@@ -2270,11 +2091,6 @@ async function loadFriends() {
   }
 }
 
-/* ============================================================
-   LEARNLOCK — Learning Progress Calendar Module
-=========================================================== */
-
-// Helper: Create a learning session record when a module is completed
 function createLearningSession(date, courseId, courseTitle, moduleId, moduleTitle, minutes, xpEarned = 50) {
   return {
     date,
@@ -2288,26 +2104,22 @@ function createLearningSession(date, courseId, courseTitle, moduleId, moduleTitl
   };
 }
 
-// Helper: Add a session to the learning history
 function recordLearningSession(date, courseId, courseTitle, moduleId, moduleTitle, minutes) {
   if (!userStats.learningSessions) userStats.learningSessions = [];
   const session = createLearningSession(date, courseId, courseTitle, moduleId, moduleTitle, minutes);
   userStats.learningSessions.push(session);
 }
 
-// Helper: Get all sessions for a specific date
 function getSessionsForDate(dateStr) {
   if (!userStats.learningSessions) return [];
   return userStats.learningSessions.filter(s => s.date === dateStr);
 }
 
-// Helper: Get total minutes learned on a date
 function getTotalMinutesForDate(dateStr) {
   const sessions = getSessionsForDate(dateStr);
   return sessions.reduce((total, s) => total + (s.minutes || 0), 0);
 }
 
-// Helper: Get total minutes for a week (starting Sunday)
 function getTotalMinutesForWeek(weekStartDate) {
   let total = 0;
   for (let i = 0; i < 7; i++) {
@@ -2319,7 +2131,6 @@ function getTotalMinutesForWeek(weekStartDate) {
   return total;
 }
 
-// Helper: Get total minutes for a month
 function getTotalMinutesForMonth(year, month) {
   if (!userStats.learningSessions) return 0;
   return userStats.learningSessions
@@ -2330,7 +2141,6 @@ function getTotalMinutesForMonth(year, month) {
     .reduce((total, s) => total + (s.minutes || 0), 0);
 }
 
-// Helper: Format minutes as "1h 12m" or "45m"
 function formatMinutes(totalMinutes) {
   if (totalMinutes === 0) return '0m';
   const hours = Math.floor(totalMinutes / 60);
@@ -2340,7 +2150,6 @@ function formatMinutes(totalMinutes) {
   return `${hours}h ${mins}m`;
 }
 
-// Helper: Get days learned and missed for the month
 function getMonthStats(year, month) {
   const lastDay = new Date(year, month, 0).getDate();
   let daysLearned = 0;
@@ -2362,15 +2171,9 @@ function getMonthStats(year, month) {
   return { daysLearned, daysMissed };
 }
 
-// ============================================================
-// CALENDAR RENDERING
-// ============================================================
-
-// Calendar mode: 'month' or 'week'
 let calendarMode = 'month';
-let calendarDate = new Date(); // which month/week to display
+let calendarDate = new Date();
 
-// Render the complete Learning Progress Calendar
 function renderLearningProgressCalendar() {
   const container = $('learning-calendar');
   if (!container) return;
@@ -2380,13 +2183,11 @@ function renderLearningProgressCalendar() {
   const year = calendarDate.getFullYear();
   const month = calendarDate.getMonth() + 1;
 
-  // Get stats for the month
   const stats = getMonthStats(year, month);
   const totalMinutes = getTotalMinutesForMonth(year, month);
   const totalDays = new Date(year, month, 0).getDate();
   const avgMinutesPerLearningDay = stats.daysLearned > 0 ? Math.round(totalMinutes / stats.daysLearned) : 0;
 
-  // Summary section
   const summaryHtml = `
     <div class="calendar-summary">
       <div class="summary-item">
@@ -2408,7 +2209,6 @@ function renderLearningProgressCalendar() {
     </div>
   `;
 
-  // Controls (Month/Week toggle, Prev/Next)
   const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
   const controlsHtml = `
     <div class="calendar-controls">
@@ -2422,7 +2222,6 @@ function renderLearningProgressCalendar() {
     </div>
   `;
 
-  // Calendar grid (for month view)
   let calendarGridHtml = '';
   if (calendarMode === 'month') {
     calendarGridHtml = renderMonthGrid(year, month);
@@ -2432,7 +2231,6 @@ function renderLearningProgressCalendar() {
 
   container.innerHTML = summaryHtml + controlsHtml + calendarGridHtml;
 
-  // Attach event listeners
   $('btn-cal-prev')?.addEventListener('click', () => {
     calendarDate.setMonth(calendarDate.getMonth() - 1);
     renderLearningProgressCalendar();
@@ -2450,7 +2248,6 @@ function renderLearningProgressCalendar() {
     });
   });
 
-  // Attach date click handlers
   document.querySelectorAll('.calendar-day').forEach(el => {
     el.addEventListener('click', () => {
       const dateStr = el.dataset.date;
@@ -2459,27 +2256,23 @@ function renderLearningProgressCalendar() {
   });
 }
 
-// Render a month's grid of dates
 function renderMonthGrid(year, month) {
-  const firstDay = new Date(year, month - 1, 1).getDay(); // 0 = Sunday
+  const firstDay = new Date(year, month - 1, 1).getDay();
   const lastDay = new Date(year, month, 0).getDate();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   let html = '<div class="calendar-grid">';
   
-  // Day headers
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   dayNames.forEach(name => {
     html += `<div class="calendar-day-header">${name}</div>`;
   });
 
-  // Empty cells before first day
   for (let i = 0; i < firstDay; i++) {
     html += '<div class="calendar-day empty"></div>';
   }
 
-  // Days of month
   for (let day = 1; day <= lastDay; day++) {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const dateObj = new Date(dateStr);
@@ -2496,7 +2289,7 @@ function renderMonthGrid(year, month) {
     ].filter(Boolean).join(' ');
 
     const timeText = minutes > 0 ? formatMinutes(minutes) : (isFuture || isToday ? '' : 'Missed');
-    const progressPct = Math.min(minutes / 60 * 100, 100); // assume 1h = full progress
+    const progressPct = Math.min(minutes / 60 * 100, 100);
 
     html += `
       <div class="calendar-day ${classes}" data-date="${dateStr}" title="${dateStr}">
@@ -2513,16 +2306,14 @@ function renderMonthGrid(year, month) {
   return html;
 }
 
-// Render weekly breakdown view
 function renderWeekView(year, month) {
   const today = new Date();
   const weeks = [];
   const firstDay = new Date(year, month - 1, 1);
   const lastDay = new Date(year, month, 0);
 
-  // Generate all weeks in month
   let currentDate = new Date(firstDay);
-  currentDate.setDate(currentDate.getDate() - currentDate.getDay()); // Start from Sunday
+  currentDate.setDate(currentDate.getDate() - currentDate.getDay());
 
   while (currentDate < lastDay) {
     const weekStart = new Date(currentDate);
@@ -2580,7 +2371,6 @@ function renderWeekView(year, month) {
   return html;
 }
 
-// Show modal with details for a clicked date
 function showDateDetailsModal(dateStr) {
   const sessions = getSessionsForDate(dateStr);
   const totalMinutes = getTotalMinutesForDate(dateStr);
@@ -2630,7 +2420,6 @@ function showDateDetailsModal(dateStr) {
     </div>
   `;
 
-  // Show modal
   const modal = document.createElement('div');
   modal.innerHTML = html;
   document.body.appendChild(modal);
@@ -2647,17 +2436,12 @@ function showDateDetailsModal(dateStr) {
   });
 }
 
-// ============================================================
-// INITIALIZE CALENDAR
-// ============================================================
-
 function initLearningCalendar() {
   calendarDate = new Date();
   calendarMode = 'month';
   renderLearningProgressCalendar();
 }
 
-// Continuous ad monitoring
 function monitorAndSkipAds() {
   setInterval(() => {
     try {
