@@ -638,6 +638,8 @@ async function showSharePanel(courseLike, anchorId) {
 }
 
 async function shareCourseWithFriend(course, friend) {
+  console.log('SHARING:', { courseName: course.name, friendEmail: friend.email, friendUid: friend.uid });
+  
   const resetModules = (mods) => mods.map((m, i) => ({
     id: m.id, name: m.name, startTime: m.startTime, endTime: m.endTime,
     status: i === 0 ? 'available' : 'locked'
@@ -656,7 +658,7 @@ async function shareCourseWithFriend(course, friend) {
   }
 
   try {
-    await shareRef.set({
+    const shareData = {
       courseId: course.id,
       name: course.name,
       source: course.source,
@@ -670,17 +672,22 @@ async function shareCourseWithFriend(course, friend) {
       invitedBy: currentUser.uid,
       createdBy: currentUser.uid,
       createdAt: Date.now()
-    });
-  } catch (err) {
-    console.error('Could not send course invite:', err);
-    toast('Could not send the course invitation. Please try again.');
-    return;
-  }
+    };
 
-  toast(`✅ "${course.name}" successfully sent to ${friend.email}.`);
-  document.querySelectorAll('.course-share-panel').forEach(p => p.remove());
-  await loadSharedCourses();
-  renderDashboard();
+    console.log('WRITING TO FIREBASE:', shareData);
+    
+    await shareRef.set(shareData);
+    
+    console.log('SUCCESS: Course invite sent');
+    toast(`✅ "${course.name}" successfully sent to ${friend.email}.`);
+    document.querySelectorAll('.course-share-panel').forEach(p => p.remove());
+    await loadSharedCourses();
+    renderDashboard();
+    
+  } catch (err) {
+    console.error('SHARING ERROR:', err);
+    toast(`❌ Error sharing course: ${err.message}`);
+  }
 }
 
 async function deleteCourse(courseId) {
