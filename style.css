@@ -1,2850 +1,1844 @@
 /* ===========================================================
-   LEARNLOCK — app.js (FIXED VERSION)
-   All the app's behavior lives here. Read the comments — they
-   explain what each part does, since you're new to coding.
+LEARNLOCK — Design tokens
+Palette: ink-blue night background, gold accent for "unlocking",
+ember-orange for streaks, steel-grey for locked states.
+Type: Fraunces (serif, display) for headings/module names —
+gives the "journey/journal" feeling — paired with Inter (sans)
+for UI chrome, numbers, and body text.
 =========================================================== */
 
-const MAX_ACTIVE_COURSES = 3; 
-const POINTS_PER_MODULE = 50;
-const STREAK_RECOVERY_COST = 4000;
-
-const REWARDS = [
-  { points: 500, icon: '🎁', label: '500 XP Reward' },
-  { points: 1000, icon: '🏅', label: '1,000 XP Reward' },
-  { points: 2500, icon: '🏆', label: '2,500 XP Reward' },
-  { points: 5000, icon: '👑', label: '5,000 XP Reward' }
-];
-
-const STREAK_MILESTONES = [
-  { days: 3, bonus: 50 },
-  { days: 7, bonus: 150 },
-  { days: 15, bonus: 500 },
-  { days: 30, bonus: 2000 },
-];
-
-const LEVEL_XP_STEP = 500;
-
-const LEVEL_TITLES = [
-  { level: 1, icon: '🌱', title: 'Beginner' },
-  { level: 2, icon: '📖', title: 'Learner' },
-  { level: 3, icon: '🔍', title: 'Explorer' },
-  { level: 4, icon: '🧠', title: 'Knowledge Seeker' },
-  { level: 5, icon: '⚡', title: 'Fast Learner' },
-  { level: 10, icon: '🏆', title: 'Dedicated Learner' },
-  { level: 15, icon: '🔥', title: 'Committed Scholar' },
-  { level: 20, icon: '👑', title: 'Learning Master' },
-  { level: 30, icon: '🚀', title: 'Momentum Master' },
-  { level: 40, icon: '🌟', title: 'Elite Learner' },
-  { level: 50, icon: '💎', title: 'Knowledge Legend' },
-];
-
-function getLevelInfo(xp) {
-  const level = Math.floor(xp / LEVEL_XP_STEP) + 1;
-  const xpIntoLevel = xp % LEVEL_XP_STEP;
-  let current = LEVEL_TITLES[0];
-  for (const t of LEVEL_TITLES) {
-    if (level >= t.level) current = t;
-  }
-  return { level, xpIntoLevel, xpForNext: LEVEL_XP_STEP, icon: current.icon, title: current.title };
-}
-
-const ACHIEVEMENTS = [
-  { id: 'first_module', icon: '🏆', label: 'First module completed', check: (s) => s.modulesCompleted >= 1, progress: (s) => ({ current: Math.min(s.modulesCompleted, 1), target: 1 }) },
-  { id: 'streak_7', icon: '🔥', label: '7-day streak', check: (s) => s.streak >= 7, progress: (s) => ({ current: Math.min(s.streak, 7), target: 7 }) },
-  { id: 'streak_30', icon: '🔥', label: '30-day streak', check: (s) => s.streak >= 30, progress: (s) => ({ current: Math.min(s.streak, 30), target: 30 }) },
-  { id: 'first_course', icon: '📚', label: 'First course completed', check: (s) => s.coursesCompleted >= 1, progress: (s) => ({ current: Math.min(s.coursesCompleted, 1), target: 1 }) },
-  { id: 'hundred_modules', icon: '💯', label: '100 modules completed', check: (s) => s.modulesCompleted >= 100, progress: (s) => ({ current: Math.min(s.modulesCompleted, 100), target: 100 }) },
-];
-
-let pendingStreakToast = null;
-
-let currentUser = null;
-let userStats = null;
-let coursesCache = [];
-let activeCourseId = null;
-let activeModuleId = null;
-let activeSubModuleId = null;
-let reviewMode = false;
-let isSignupMode = false;
-let activeCourseType = 'personal';
-let sharedCoursesCache = [];
-
-let timerSecondsLeft = 0;
-let timerTotalSeconds = 0;
-let timerInterval = null;
-let timerRunning = false;
-let youtubePlayer = null;
-let youtubeMaxWatchedSeconds = 0;
-let youtubeSeekProtectionInterval = null;
-let youtubeAPIReady = false;
-let pendingYouTubeRequest = null;
-let currentCourseVideoId = null;
-
-function $(id) { return document.getElementById(id); }
-
-function showView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  $('view-' + name).classList.add('active');
-}
-
-function toast(message) {
-  const el = $('toast');
-  el.textContent = message;
-  el.classList.add('show');
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => el.classList.remove('show'), 3200);
-}
-
-function toLocalDateStr(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function todayStr() {
-  return toLocalDateStr(new Date());
-}
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
 
-function daysBetween(a, b) {
-  const d1 = new Date(a), d2 = new Date(b);
-  return Math.round((d2 - d1) / 86400000);
+:root {
+--bg: #0B1220;
+--surface: #111B2E;
+--surface-raised: #17243A;
+--line: #24344D;
+--locked: #3A475D;
+
+--gold: #4FD1B5;
+--gold-dim: #7A6330;
+
+--primary: #4FD1B5;
+--primary-dark: #35BFA5;
+
+--success: #34D399;
+--ember: #F87171;
+
+--purple: #8B8CF6;
+
+--text: #F1F5F9;
+--text-muted: #94A3B8;
+
+--radius: 10px;
+--serif: 'Fraunces', Georgia, serif;
+--sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+margin: 0;
+padding: 0;
+background: var(--bg);
+color: var(--text);
+font-family: var(--sans);
+-webkit-font-smoothing: antialiased;
+}
+
+body { min-height: 100vh; }
+
+a { color: inherit; }
+
+button {
+font-family: var(--sans);
+cursor: pointer;
+border: none;
+}
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+outline: 2px solid var(--primary);
+outline-offset: 2px;
+}
+
+::selection { background: var(--primary-dark); color: var(--text); }
+
+/* ---------- Layout shell ---------- */
+
+.shell {
+max-width: 720px;
+margin: 0 auto;
+padding: 0 20px 80px;
+}
+
+.topbar {
+display: flex;
+align-items: baseline;
+justify-content: space-between;
+padding: 24px 0 20px;
+border-bottom: 1px solid var(--line);
+margin-bottom: 28px;
+}
+
+.brand {
+font-family: var(--serif);
+font-weight: 600;
+font-size: 22px;
+letter-spacing: 0.2px;
+}
+
+.brand .lock-mark { color: #4FD1B5; }
+
+.topbar-right {
+display: flex;
+align-items: center;
+gap: 16px;
+font-size: 14px;
+color: var(--text-muted);
+}
+
+.icon-btn {
+background: none;
+color: var(--text-muted);
+font-size: 14px;
+padding: 6px 10px;
+border-radius: 6px;
+}
+
+.icon-btn:hover { color: var(--text); background: var(--surface); }
+
+/* ---------- Views ---------- */
+
+.view { display: none; }
+.view.active { display: block; }
+
+/* ---------- Auth screen ---------- */
+
+.auth-wrap {
+max-width: 380px;
+margin: 8vh auto 0;
+padding: 0 20px;
+}
+
+.auth-hero {
+font-family: var(--serif);
+font-size: 34px;
+line-height: 1.15;
+font-weight: 600;
+margin: 0 0 8px;
+}
+
+.auth-hero .lock-mark { color: #4FD1B5; }
+
+.auth-sub {
+color: var(--text-muted);
+font-size: 15px;
+margin: 0 0 32px;
+line-height: 1.5;
+}
+
+.field {
+margin-bottom: 14px;
+}
+
+.field label {
+display: block;
+font-size: 13px;
+color: var(--text-muted);
+margin-bottom: 6px;
+}
+
+.field input {
+width: 100%;
+background: var(--surface);
+border: 1px solid var(--line);
+color: var(--text);
+padding: 11px 13px;
+border-radius: 8px;
+font-size: 15px;
+font-family: var(--sans);
+}
+
+.field input:focus { border-color: #4FD1B5; }
+
+.btn-primary {
+width: 100%;
+background: #4FD1B5;
+color: #071A17;
+font-weight: 600;
+font-size: 15px;
+padding: 12px;
+border-radius: 8px;
+margin-top: 6px;
+transition: transform 0.08s ease;
+}
+
+.btn-primary:hover { transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-secondary {
+width: 100%;
+background: transparent;
+border: 1px solid var(--line);
+color: var(--text);
+font-size: 14px;
+padding: 10px;
+border-radius: 8px;
+margin-top: 8px;
+}
+
+.btn-secondary:hover { border-color: var(--text-muted); }
+
+.auth-toggle {
+text-align: center;
+margin-top: 20px;
+font-size: 14px;
+color: var(--text-muted);
+}
+
+.auth-toggle button {
+background: none;
+color: #4FD1B5;
+font-weight: 500;
+font-size: 14px;
+padding: 0;
+}
+
+.auth-error {
+background: rgba(248, 113, 113, 0.12);
+border: 1px solid var(--ember);
+color: #FECACA;
+font-size: 13px;
+padding: 10px 12px;
+border-radius: 8px;
+margin-bottom: 14px;
+display: none;
+}
+
+/* ---------- Stats strip ---------- */
+
+.stats-row {
+display: flex;
+gap: 10px;
+margin-bottom: 32px;
+}
+
+.stat-box {
+flex: 1;
+background: var(--surface);
+border: 1px solid var(--line);
+border-radius: var(--radius);
+padding: 14px 16px;
+}
+
+.stat-num {
+font-family: var(--serif);
+font-size: 24px;
+font-weight: 600;
+line-height: 1;
+}
+
+.stat-num.streak { color: var(--ember); }
+.stat-num.points { color: #4FD1B5; }
+
+.stat-label {
+font-size: 12px;
+color: var(--text-muted);
+margin-top: 4px;
+}
+
+/* ---------- Section headers ---------- */
+
+.section-head {
+display: flex;
+align-items: center;
+justify-content: space-between;
+margin-bottom: 14px;
+}
+
+.section-title {
+font-family: var(--serif);
+font-size: 19px;
+font-weight: 600;
+}
+
+.muted-note {
+font-size: 13px;
+color: var(--text-muted);
+}
+
+/* ---------- Course list ---------- */
+
+.course-item {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 16px 4px;
+border-bottom: 1px solid var(--line);
+cursor: pointer;
+flex-wrap: wrap;
+}
+
+.course-item:hover .course-name { color: #4FD1B5; }
+
+.course-info {
+flex: 1;
+min-width: 200px;
+}
+
+.course-name {
+font-family: var(--serif);
+font-size: 17px;
+font-weight: 600;
+overflow-wrap: break-word;
+word-break: break-word;
+white-space: normal;
+flex: 1;
+min-width: 200px;
+}
+
+.course-meta {
+font-size: 13px;
+color: var(--text-muted);
+margin-top: 3px;
+}
+
+.course-progress-ring {
+font-size: 13px;
+color: #4FD1B5;
+font-weight: 600;
+white-space: nowrap;
+margin-left: 12px;
+}
+
+.empty-state {
+padding: 40px 4px;
+text-align: center;
+color: var(--text-muted);
+font-size: 14px;
+line-height: 1.6;
+}
+
+.btn-new-course {
+background: var(--surface);
+border: 1px dashed var(--line);
+color: var(--text-muted);
+width: 100%;
+padding: 14px;
+border-radius: var(--radius);
+font-size: 14px;
+margin-top: 18px;
+}
+
+.btn-new-course:hover { border-color: #4FD1B5; color: #4FD1B5; }
+
+/* ---------- Course builder ---------- */
+
+.module-row {
+padding: 12px 0;
+border-bottom: 1px solid var(--line);
+}
+
+.module-row-main {
+display: flex;
+gap: 10px;
+align-items: flex-start;
+}
+
+.module-row-main .field { flex: 1; margin-bottom: 0; }
+.module-row-main .field.dur { max-width: 110px; }
+
+.remove-module {
+background: none;
+color: var(--text-muted);
+font-size: 13px;
+padding: 10px 4px;
+margin-top: 2px;
+}
+
+.remove-module:hover { color: var(--ember); }
+
+.submodule-list {
+margin-top: 10px;
+margin-left: 20px;
+padding-left: 14px;
+border-left: 2px solid var(--line);
+}
+
+.submodule-row {
+display: flex;
+gap: 8px;
+align-items: flex-start;
+padding: 8px 0;
+}
+
+.submodule-row .field { flex: 1; margin-bottom: 0; }
+.submodule-row input {
+font-size: 13px;
+padding: 8px 10px;
+}
+
+.btn-add-submodule {
+background: none;
+border: none;
+color: var(--text-muted);
+font-size: 12px;
+padding: 6px 4px 0 20px;
+cursor: pointer;
+}
+
+.btn-add-submodule:hover { color: #4FD1B5; }
+
+.btn-add-module {
+background: none;
+border: 1px dashed var(--line);
+color: var(--text-muted);
+width: 100%;
+padding: 12px;
+border-radius: 8px;
+font-size: 14px;
+margin: 16px 0 24px;
+}
+
+.btn-add-module:hover { border-color: #4FD1B5; color: #4FD1B5; }
+
+/* ---------- Learning path (the day-by-day journey) ---------- */
+
+.path {
+position: relative;
+padding-left: 34px;
+}
+
+.path::before {
+content: "";
+position: absolute;
+left: 11px;
+top: 6px;
+bottom: 6px;
+width: 2px;
+background: var(--line);
+}
+
+.path-node {
+position: relative;
+padding-bottom: 26px;
+}
+
+.path-node:last-child { padding-bottom: 4px; }
+
+.node-dot {
+position: absolute;
+left: -34px;
+top: 2px;
+width: 24px;
+height: 24px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 12px;
+font-weight: 700;
+background: var(--bg);
+border: 2px solid var(--locked);
+color: var(--text-muted);
+z-index: 1;
+}
+
+.path-node.completed .node-dot {
+background: #4FD1B5;
+border-color: #4FD1B5;
+color: #071A17;
+}
+
+.path-node.current .node-dot {
+border-color: #4FD1B5;
+color: #4FD1B5;
+}
+
+.node-card {
+background: var(--surface);
+border: 1px solid var(--line);
+border-radius: var(--radius);
+padding: 14px 16px;
+}
+
+.path-node.current .node-card { border-color: var(--gold-dim); }
+.path-node.locked .node-card { opacity: 0.55; }
+
+.node-day {
+font-size: 12px;
+color: var(--text-muted);
+text-transform: none;
+margin-bottom: 3px;
+}
+
+.node-title {
+font-family: var(--serif);
+font-size: 17px;
+font-weight: 600;
+}
+
+.node-duration {
+font-size: 13px;
+color: var(--text-muted);
+margin-top: 2px;
+}
+
+.node-status {
+font-size: 12px;
+color: var(--locked);
+margin-top: 8px;
+}
+
+.submodule-progress-list {
+margin-top: 8px;
+padding-left: 4px;
+border-left: 2px solid var(--line);
+}
+
+.submodule-progress-item {
+display: flex;
+align-items: center;
+gap: 8px;
+padding: 4px 0 4px 10px;
+font-size: 13px;
+color: var(--text-muted);
+}
+
+.submodule-progress-item.completed {
+color: var(--text);
+}
+
+.submodule-progress-item.available {
+color: #4FD1B5;
+font-weight: 600;
+}
+
+.submodule-progress-icon {
+font-size: 11px;
+width: 14px;
+text-align: center;
+flex-shrink: 0;
+}
+
+.btn-rewatch {
+background: none;
+border: 1px solid var(--line);
+color: var(--text-muted);
+font-size: 11px;
+padding: 4px 9px;
+border-radius: 6px;
+margin-left: auto;
+cursor: pointer;
+white-space: nowrap;
+}
+
+.btn-rewatch:hover {
+border-color: #4FD1B5;
+color: #4FD1B5;
+}
+
+.btn-start {
+background: #4FD1B5;
+color: #071A17;
+font-weight: 600;
+font-size: 13px;
+padding: 8px 16px;
+border-radius: 7px;
+margin-top: 10px;
+}
+
+.btn-start:hover { transform: translateY(-1px); }
+
+/* ---------- Module dashboard (timer) ---------- */
+
+.module-stage {
+text-align: center;
+padding: 30px 0 10px;
+}
+
+.module-day-tag {
+font-size: 13px;
+color: var(--text-muted);
+margin-bottom: 6px;
+}
+
+.module-title {
+font-family: var(--serif);
+font-size: 26px;
+font-weight: 600;
+margin-bottom: 26px;
+padding: 0 10px;
+}
+
+.timer-display {
+font-family: var(--serif);
+font-size: 64px;
+font-weight: 600;
+font-variant-numeric: tabular-nums;
+letter-spacing: 1px;
+margin-bottom: 6px;
+}
+
+.timer-display.done { color: #4FD1B5; }
+
+.timer-label {
+font-size: 13px;
+color: var(--text-muted);
+margin-bottom: 30px;
+}
+
+.timer-controls {
+display: flex;
+gap: 10px;
+justify-content: center;
+margin-bottom: 8px;
+}
+
+.timer-controls button {
+padding: 12px 26px;
+border-radius: 8px;
+font-size: 15px;
+font-weight: 600;
+}
+
+.btn-timer-main {
+background: #4FD1B5;
+color: #071A17;
+}
+
+.btn-timer-ghost {
+background: transparent;
+border: 1px solid var(--line);
+color: var(--text);
+}
+
+.btn-complete {
+background: #4FD1B5;
+color: #071A17;
+font-weight: 700;
+font-size: 16px;
+padding: 14px;
+width: 100%;
+border-radius: 9px;
+margin-top: 20px;
+}
+
+.btn-complete:disabled {
+background: var(--surface);
+color: var(--text-muted);
+cursor: not-allowed;
+}
+
+.extra-note {
+font-size: 13px;
+color: var(--text-muted);
+margin-top: 16px;
+}
+
+/* ---------- Toast / celebration ---------- */
+
+.toast {
+position: fixed;
+left: 50%;
+bottom: 26px;
+transform: translateX(-50%) translateY(10px);
+background: var(--surface-raised);
+border: 1px solid var(--gold-dim);
+color: var(--text);
+padding: 14px 20px;
+border-radius: 10px;
+font-size: 14px;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.2s ease, transform 0.2s ease;
+z-index: 50;
+max-width: 90%;
+text-align: center;
+}
+
+.toast.show {
+opacity: 1;
+transform: translateX(-50%) translateY(0);
+}
+
+/* ---------- Achievements ---------- */
+
+.badge-row {
+display: flex;
+flex-wrap: wrap;
+gap: 10px;
+margin-top: 4px;
+}
+
+.badge {
+background: var(--surface);
+border: 1px solid var(--line);
+border-radius: 8px;
+padding: 10px 12px;
+font-size: 13px;
+display: flex;
+align-items: center;
+gap: 8px;
+min-width: 140px;
+}
+
+.badge.earned { border-color: var(--gold-dim); }
+.badge.locked { opacity: 0.4; }
+.badge.in-progress { border-color: var(--line); opacity: 0.85; }
+
+.badge-icon { font-size: 16px; }
+
+.badge-body {
+display: flex;
+flex-direction: column;
+gap: 2px;
+}
+
+.badge-name {
+font-size: 13px;
+color: var(--text);
+}
+
+.badge-state {
+font-size: 11px;
+color: var(--text-muted);
+}
+
+.badge.earned .badge-state { color: #4FD1B5; }
+.badge.in-progress .badge-state { color: var(--ember); }
+
+/* ---------- Continue Learning card ---------- */
+
+.continue-card {
+background: linear-gradient(135deg, var(--surface-raised), var(--surface));
+border: 1px solid var(--gold-dim);
+border-radius: var(--radius);
+padding: 16px 18px;
+margin-bottom: 20px;
+}
+
+.continue-card-label {
+font-size: 12px;
+color: #4FD1B5;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+font-weight: 600;
+margin-bottom: 6px;
+}
+
+.continue-card-course {
+font-family: var(--serif);
+font-size: 19px;
+font-weight: 600;
+margin-bottom: 2px;
+}
+
+.continue-card-next {
+font-size: 13px;
+color: var(--text-muted);
+margin-bottom: 14px;
+}
+
+.continue-card .btn-primary {
+width: auto;
+padding: 10px 22px;
+}
+
+/* ---------- Course progress bar ---------- */
+
+.course-progress-bar {
+background: var(--surface);
+border: 1px solid var(--line);
+border-radius: 6px;
+height: 6px;
+overflow: hidden;
+margin-top: 8px;
+max-width: 260px;
+}
+
+.course-progress-bar-fill {
+background: #4FD1B5;
+height: 100%;
+}
+
+/* ---------- Misc ---------- */
+
+.back-link {
+background: none;
+color: var(--text-muted);
+font-size: 14px;
+padding: 6px 0;
+margin-bottom: 4px;
+}
+
+.back-link:hover { color: var(--text); }
+
+.setup-note {
+background: var(--surface);
+border: 1px solid var(--line);
+border-left: 3px solid #4FD1B5;
+padding: 14px 16px;
+border-radius: 8px;
+font-size: 13px;
+color: var(--text-muted);
+line-height: 1.6;
+margin-bottom: 24px;
+}
+
+.setup-note code {
+background: var(--bg);
+padding: 1px 5px;
+border-radius: 4px;
+font-size: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+* { transition: none !important; animation: none !important; }
+}
+
+@media (max-width: 480px) {
+.timer-display { font-size: 48px; }
+.auth-wrap { margin-top: 4vh; }
+
+.shell { padding: 0 14px 60px; }
+
+/* Stack the module-name/start/end row instead of squeezing 3 inputs
+side by side on a narrow screen. */
+.module-row-main {
+flex-wrap: wrap;
+}
+.module-row-main .field { flex: 1 1 100%; }
+.module-row-main .field.time { flex: 1 1 45%; }
+.module-row-main .remove-module { margin-left: auto; }
+
+.submodule-row { flex-wrap: wrap; }
+.submodule-row .field { flex: 1 1 100%; }
+.submodule-row .field.time { flex: 1 1 45%; }
+
+/* Stats row: keep 3 columns but tighten padding so numbers/labels
+don't get cramped or overflow at 320-360px. */
+.stats-row { gap: 6px; }
+.stat-box { padding: 10px 8px; }
+.stat-num { font-size: 20px; }
+
+/* Course cards: let the ⋮ menu and % sit above the text instead of
+squeezing into one tight row. */
+.course-item {
+flex-wrap: wrap;
+row-gap: 8px;
+}
+.course-progress-ring { order: -1; margin-left: auto; }
+
+/* Continue Learning card fills the width, button becomes a full,
+easy-to-tap target. */
+.continue-card .btn-primary { width: 100%; }
+
+/* Comfortable tap targets everywhere on mobile (WCAG-friendly). */
+.btn-primary, .btn-secondary, .btn-new-course, .btn-add-module,
+.btn-add-submodule, .btn-start, .btn-rewatch, .btn-complete,
+.btn-timer-main, .btn-timer-ghost, .icon-btn, .cancel-share,
+.friend-email-share {
+min-height: 44px;
+}
+
+.timer-controls { flex-wrap: wrap; }
+.timer-controls button { flex: 1 1 45%; }
+
+/* Topbar: let the email wrap under the brand instead of squeezing
+against the logout button on very narrow screens. */
+.topbar { flex-wrap: wrap; row-gap: 8px; }
+.topbar-right { flex-wrap: wrap; }
+
+/* Accept/Reject and friend-add buttons become full-width, stacked
+targets instead of two cramped inline buttons. */
+.card .btn-primary, .card .btn-secondary {
+display: block;
+width: 100%;
+margin: 0 0 8px;
+}
+.friend-add-row { flex-direction: column; }
+.friend-add-row .btn-primary { width: 100%; }
+
+.youtube-player-wrap {
+max-width: 70%;
+margin-left: auto;
+margin-right: auto;
+}
+}
+
+/* ---------- Level banner ---------- */
+
+.level-banner {
+background: var(--surface);
+border: 1px solid var(--line);
+border-radius: var(--radius);
+padding: 14px 16px;
+margin-bottom: 20px;
+}
+
+.level-title {
+font-family: var(--serif);
+font-weight: 600;
+font-size: 17px;
+margin-bottom: 10px;
+}
+
+.level-xp-bar {
+background: var(--bg);
+border-radius: 6px;
+height: 8px;
+overflow: hidden;
+margin-bottom: 6px;
+}
+
+.level-xp-fill {
+background: #4FD1B5;
+height: 100%;
+}
+
+.level-xp-text {
+font-size: 12px;
+color: var(--text-muted);
+}
+
+/* ---------- Streak calendar (GitHub-style grid) ---------- */
+
+.streak-cal-grid {
+display: flex;
+gap: 3px;
+overflow-x: auto;
+padding: 4px 2px 12px;
+}
+
+.streak-cal-col {
+display: flex;
+flex-direction: column;
+gap: 3px;
+flex-shrink: 0;
+}
+
+.streak-cal-cell {
+width: 12px;
+height: 12px;
+border-radius: 3px;
+background: transparent;
+}
+
+.streak-cal-cell.cal-inactive {
+background: var(--surface);
+border: 1px solid var(--line);
+}
+
+.streak-cal-cell.cal-active {
+background: #4FD1B5;
+}
+
+/* ---------- Friends ---------- */
+
+.card {
+background: var(--surface);
+border: 1px solid var(--line);
+border-radius: var(--radius);
+padding: 14px 16px;
+margin-bottom: 10px;
+}
+
+.card p {
+margin: 0 0 10px;
+font-size: 14px;
+color: var(--text);
+}
+
+.card .btn-primary,
+.card .btn-secondary {
+width: auto;
+display: inline-block;
+padding: 8px 16px;
+font-size: 13px;
+margin-right: 8px;
+}
+
+.friend-add-row {
+display: flex;
+gap: 8px;
+margin-bottom: 16px;
+flex-wrap: wrap;
+}
+
+.friend-add-row input {
+flex: 1;
+min-width: 160px;
+background: var(--surface);
+border: 1px solid var(--line);
+color: var(--text);
+padding: 10px 12px;
+border-radius: 8px;
+font-size: 14px;
+font-family: var(--sans);
+}
+
+.friend-add-row input:focus { border-color: #4FD1B5; }
+
+.friend-add-row .btn-primary {
+width: auto;
+padding: 10px 18px;
+}
+
+.friend-item {
+display: flex;
+align-items: center;
+gap: 10px;
+padding: 12px 4px;
+border-bottom: 1px solid var(--line);
+}
+
+.friend-avatar { font-size: 18px; }
+
+.friend-email { font-size: 14px; color: var(--text); }
+
+/* ---------- Course menu (⋮ dropdown) ---------- */
+
+.course-item {
+position: relative;
+}
+
+.course-menu-wrap {
+position: relative;
+}
+
+.course-menu-btn {
+background: none;
+border: none;
+color: var(--text-muted);
+font-size: 20px;
+line-height: 1;
+padding: 6px 10px;
+border-radius: 6px;
+cursor: pointer;
+}
+
+.course-menu-btn:hover {
+background: var(--surface);
+color: var(--text);
+}
+
+.course-menu-dropdown {
+display: none;
+position: absolute;
+right: 0;
+top: 100%;
+z-index: 100;
+min-width: 160px;
+background: var(--surface-raised);
+border: 1px solid var(--line);
+border-radius: 8px;
+padding: 6px;
+box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.course-menu-dropdown.open {
+display: block;
+}
+
+.course-menu-dropdown button {
+display: block;
+width: 100%;
+text-align: left;
+border: none;
+background: transparent;
+padding: 9px 10px;
+cursor: pointer;
+color: var(--text);
+font-size: 14px;
+border-radius: 6px;
+font-family: var(--sans);
+}
+
+.course-menu-dropdown button:hover {
+background: var(--bg);
+}
+
+.course-menu-dropdown button.danger {
+color: var(--ember);
+}
+
+/* ---------- Inline course share panel ---------- */
+
+.course-share-panel {
+margin-top: 10px;
+padding: 12px;
+background: var(--surface);
+border: 1px solid var(--line);
+border-radius: 8px;
+width: 100%;
+min-width: 280px;
+flex-basis: 100%;
+}
+
+.course-share-panel strong {
+display: block;
+word-break: break-word;
+white-space: normal;
+max-width: 100%;
+width: 100%;
+}
+
+.course-share-panel p {
+margin: 0 0 8px;
+font-size: 14px;
+color: var(--text);
+white-space: normal;
+word-wrap: break-word;
+overflow-wrap: break-word;
+max-width: 100%;
+}
+
+.friend-email-share {
+display: block;
+width: 100%;
+background: var(--bg);
+border: 1px solid var(--line);
+color: var(--text);
+padding: 9px 12px;
+border-radius: 6px;
+font-size: 14px;
+margin-bottom: 6px;
+text-align: left;
+cursor: pointer;
+}
+
+.friend-email-share:hover {
+border-color: #4FD1B5;
+color: #4FD1B5;
+}
+
+.cancel-share {
+background: transparent;
+border: 1px solid var(--line);
+color: var(--text-muted);
+padding: 8px 12px;
+border-radius: 6px;
+font-size: 13px;
+cursor: pointer;
+}
+
+.cancel-share:hover {
+color: var(--text);
+}
+
+/* ---------- Video player (responsive at every screen size) ---------- */
+.youtube-player-wrap {
+width: 100%;
+max-width: 100vw; /* never wider than screen */
+margin-bottom: 20px;
+padding: 0 4px; /* small inner gap so it doesn't touch edges */
+}
+
+.youtube-player-frame {
+position: relative;
+width: 100%;
+aspect-ratio: 16 / 9;
+background-color: #000;
+border-radius: 8px;
+overflow: hidden;
+}
+
+.youtube-player-frame iframe,
+.youtube-player-frame #youtube-player {
+position: absolute;
+inset: 0;
+width: 100% !important;
+height: 100% !important;
+border: none;
+}
+
+/* Mobile fixes: ensure video never overflows */
+@media (max-width: 480px) {
+.youtube-player-wrap {
+max-width: calc(100vw - 24px); /* leave some margin from edges */
+margin-left: auto;
+margin-right: auto;
+}
+
+.youtube-player-frame {
+border-radius: 6px;
+}
+
+/* If you have any custom width on #youtube-player, this overrides it */
+#youtube-player,
+#youtube-player iframe {
+max-width: 100% !important;
+width: 100% !important;
+height: 100% !important;
+}
+}
+
+/* ============ COURSE PATH VIEW ============ */
+.view-path {
+background: linear-gradient(135deg, #0E1A2B 0%, #0B1220 100%);
+}
+
+#path-container {
+display: flex;
+flex-direction: column;
+gap: 12px;
+}
+
+.path-module {
+background: #132238;
+border: 2px solid #29405B;
+border-radius: 12px;
+padding: 16px;
+transition: all 0.3s ease;
+cursor: pointer;
+}
+
+.path-module:hover {
+border-color: #4FD1B5;
+background: #1B2C45;
+transform: translateX(4px);
+}
+
+.path-module.completed {
+border-color: #34D399;
+background: rgba(46, 204, 113, 0.05);
+}
+
+.path-module.active {
+border-color: #4FD1B5;
+background: rgba(79, 209, 181, 0.05);
+box-shadow: 0 0 20px rgba(79, 209, 181, 0.2);
+}
+
+.path-module.locked {
+opacity: 0.6;
+border-color: #3A475D;
+background: #0F1726;
+cursor: not-allowed;
+}
+
+.path-module-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 8px;
+}
+
+.path-day {
+font-size: 14px;
+font-weight: bold;
+color: #4FD1B5;
+background: rgba(79, 209, 181, 0.1);
+padding: 4px 12px;
+border-radius: 20px;
+}
+
+.path-status {
+font-size: 12px;
+font-weight: bold;
+color: #94A3B8;
+}
+
+.path-module.completed .path-status {
+color: #34D399;
+}
+
+.path-module.active .path-status {
+color: #4FD1B5;
+}
+
+.path-module.locked .path-status {
+color: #64748B;
+}
+
+.path-module-title {
+font-size: 18px;
+font-weight: 600;
+color: #F1F5F9;
+margin-bottom: 6px;
+}
+
+.path-module-time {
+font-size: 13px;
+color: #94A3B8;
+margin-bottom: 12px;
+}
+
+.btn-watch,
+.btn-continue-module {
+width: 100%;
+padding: 10px 16px;
+border: none;
+border-radius: 8px;
+font-size: 14px;
+font-weight: bold;
+cursor: pointer;
+transition: all 0.2s ease;
+}
+
+.btn-watch {
+background: #4FD1B5;
+color: #071A17;
+}
+
+.btn-watch:hover {
+background: #35BFA5;
+transform: scale(1.02);
+}
+
+.btn-continue-module {
+background: #4FD1B5;
+color: #000;
+}
+
+.btn-continue-module:hover {
+background: #35BFA5;
+transform: scale(1.02);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+.path-module {
+padding: 14px;
+}
+
+.path-module-title {
+font-size: 16px;
+}
+
+.btn-watch,
+.btn-continue-module {
+padding: 8px 12px;
+font-size: 13px;
+}
+}
+
+/* ============ CALENDAR CONTAINER ============ */
+
+#streak-calendar {
+width: 100%;
+margin-top: 24px;
+margin-bottom: 40px;
 }
 
-function timeToSeconds(time) {
-  const parts = time.split(':').map(Number);
-  if (parts.length !== 3 || parts.some(Number.isNaN)) return 0;
-  return parts[0] * 3600 + parts[1] * 60 + parts[2];
+/* ============ SUMMARY STATS ROW ============ */
+
+
+/* Learning Calendar Grid & Styles */
+.calendar-summary {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+gap: 15px;
+margin-bottom: 20px;
+}
+
+.summary-item {
+background: var(--surface);
+padding: 15px;
+border-radius: 8px;
+text-align: center;
+border: 1px solid var(--line);
+}
+
+.summary-label {
+font-size: 0.85rem;
+color: var(--text-muted);
+margin-bottom: 8px;
+}
+
+.summary-value {
+font-size: 1.5rem;
+font-weight: 700;
+color: #4FD1B5;
+}
+
+/* Controls */
+.calendar-controls {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 20px;
+gap: 15px;
+}
+
+.btn-calendar-nav {
+padding: 8px 16px;
+background: var(--surface);
+border: 1px solid var(--line);
+border-radius: 6px;
+cursor: pointer;
+color: var(--text);
+font-size: 0.9rem;
+transition: all 0.2s;
+}
+
+.btn-calendar-nav:hover {
+background: var(--surface-raised);
+border-color: #4FD1B5;
+}
+
+.calendar-month-display {
+font-size: 1.1rem;
+font-weight: 600;
+color: var(--text);
+flex: 1;
+text-align: center;
+}
+
+.calendar-mode-toggle {
+display: flex;
+gap: 10px;
+margin-bottom: 15px;
+}
+
+.btn-cal-mode {
+padding: 8px 16px;
+background: var(--surface);
+border: 1px solid var(--line);
+border-radius: 6px;
+cursor: pointer;
+color: var(--text-muted);
+font-size: 0.9rem;
+transition: all 0.2s;
+}
+
+.btn-cal-mode:hover {
+background: var(--surface-raised);
+border-color: #4FD1B5;
+}
+
+.btn-cal-mode.active {
+background: #4FD1B5;
+color: #071A17;
+border-color: #4FD1B5;
+font-weight: 600;
+}
+
+/* Month Grid */
+.calendar-grid {
+display: grid;
+grid-template-columns: repeat(7, 1fr);
+gap: 8px;
+margin-bottom: 20px;
+}
+
+.calendar-day-header {
+text-align: center;
+font-weight: 600;
+font-size: 0.85rem;
+color: var(--text-muted);
+padding: 10px 0;
+}
+
+.calendar-day {
+background: var(--surface);
+border: 1px solid var(--line);
+border-radius: 6px;
+padding: 8px;
+min-height: 80px;
+display: flex;
+flex-direction: column;
+cursor: pointer;
+transition: all 0.2s;
+position: relative;
+}
+
+.calendar-day.empty {
+background: transparent;
+border: none;
+cursor: default;
+}
+
+.calendar-day.future {
+opacity: 0.5;
+cursor: default;
+}
+
+.calendar-day.today {
+border: 2px solid #4FD1B5;
+font-weight: 600;
+}
+
+.calendar-day.active {
+background: rgba(79, 209, 181, 0.1);
+border-color: #4FD1B5;
+}
+
+.calendar-day:not(.empty):not(.future):hover {
+background: var(--surface-raised);
+border-color: #4FD1B5;
+transform: translateY(-2px);
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.day-number {
+font-weight: 700;
+color: var(--text);
+font-size: 0.95rem;
+}
+
+.day-time {
+font-size: 0.8rem;
+color: #4FD1B5;
+margin-top: 4px;
+font-weight: 500;
+}
+
+.day-progress-bar {
+margin-top: 6px;
+height: 4px;
+background: var(--line);
+border-radius: 2px;
+overflow: hidden;
+}
+
+.day-progress-fill {
+height: 100%;
+background: #4FD1B5;
+transition: width 0.3s;
+}
+
+/* Week View */
+.calendar-weeks {
+display: flex;
+flex-direction: column;
+gap: 20px;
+}
+
+.week-card {
+background: var(--surface);
+border: 1px solid var(--line);
+border-radius: 8px;
+padding: 15px;
+}
+
+.week-header {
+display: flex;
+justify-content: space-between;
+margin-bottom: 15px;
+font-size: 0.95rem;
+}
+
+.week-range {
+font-weight: 600;
+color: var(--text);
+}
+
+.week-total {
+color: #4FD1B5;
+font-weight: 600;
+}
+
+.week-bars {
+display: flex;
+justify-content: space-around;
+align-items: flex-end;
+height: 120px;
+gap: 8px;
+}
+
+.week-bar-item {
+display: flex;
+flex-direction: column;
+align-items: center;
+flex: 1;
+gap: 8px;
+}
+
+.week-bar-day {
+font-size: 0.8rem;
+font-weight: 600;
+color: var(--text-muted);
 }
 
-function formatTime(totalSeconds) {
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  return [h, m, s].map(n => String(n).padStart(2, '0')).join(':');
+.week-bar {
+width: 100%;
+background: #4FD1B5;
+border-radius: 4px 4px 0 0;
+min-height: 4px;
+transition: all 0.3s;
 }
 
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
+.week-bar:hover {
+opacity: 0.8;
+transform: scaleY(1.05);
 }
 
-const RESUME_WINDOW_MS = 24 * 60 * 60 * 1000;
+.week-bar-time {
+font-size: 0.75rem;
+color: var(--text-muted);
+}
+
+/* Modal */
+.modal-overlay {
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(0, 0, 0, 0.6);
+display: flex;
+justify-content: center;
+align-items: center;
+z-index: 1000;
+animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+from { opacity: 0; }
+to { opacity: 1; }
+}
+
+.modal-content {
+background: var(--surface);
+border-radius: 12px;
+max-width: 500px;
+width: 90%;
+max-height: 80vh;
+overflow-y: auto;
+box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+from { transform: translateY(20px); opacity: 0; }
+to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 20px;
+border-bottom: 1px solid var(--line);
+}
+
+.modal-title {
+font-size: 1.3rem;
+font-weight: 600;
+color: var(--text);
+}
+
+.modal-close {
+background: none;
+border: none;
+font-size: 1.5rem;
+cursor: pointer;
+color: var(--text-muted);
+transition: color 0.2s;
+}
+
+.modal-close:hover {
+color: #4FD1B5;
+}
+
+.modal-body {
+padding: 20px;
+}
+
+.modal-summary {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 15px;
+margin-bottom: 20px;
+}
+
+.modal-stat {
+display: flex;
+justify-content: space-between;
+flex-direction: column;
+background: var(--surface-raised);
+padding: 12px;
+border-radius: 6px;
+}
+
+.modal-label {
+font-size: 0.85rem;
+color: var(--text-muted);
+margin-bottom: 6px;
+}
+
+.modal-value {
+font-size: 1.3rem;
+font-weight: 700;
+color: #4FD1B5;
+}
+
+.no-sessions {
+text-align: center;
+padding: 20px;
+color: var(--text-muted);
+font-size: 0.95rem;
+}
+
+.sessions-list {
+display: flex;
+flex-direction: column;
+gap: 12px;
+}
+
+.session-item {
+background: var(--surface-raised);
+padding: 12px;
+border-radius: 6px;
+border-left: 3px solid #4FD1B5;
+}
+
+.session-course {
+font-weight: 600;
+color: var(--text);
+font-size: 0.95rem;
+margin-bottom: 4px;
+}
+
+.session-module {
+color: var(--text-muted);
+font-size: 0.85rem;
+margin-bottom: 8px;
+}
+
+.session-time-xp {
+display: flex;
+justify-content: space-between;
+font-size: 0.85rem;
+color: #4FD1B5;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+.calendar-grid {
+gap: 6px;
+}
+
+.calendar-day {
+min-height: 70px;
+padding: 6px;
+}
+
+.day-number {
+font-size: 0.85rem;
+}
+
+.day-time {
+font-size: 0.75rem;
+}
+
+.week-bars {
+height: 100px;
+}
+
+.summary-item {
+padding: 12px;
+}
+
+.summary-value {
+font-size: 1.2rem;
+}
+}
+
+@media (max-width: 480px) {
+.calendar-controls {
+flex-direction: column;
+gap: 10px;
+}
 
-function resumeStorageKey() {
-  return currentUser ? `learnlock_resume_${currentUser.uid}` : null;
+.calendar-grid {
+gap: 4px;
+}
+
+.calendar-day {
+min-height: 60px;
+padding: 4px;
+font-size: 0.8rem;
+}
+
+.day-number {
+font-size: 0.75rem;
+}
+
+.day-time {
+font-size: 0.65rem;
+margin-top: 2px;
+}
+}
+.youtube-player-wrap-inner { position: relative; }
+.youtube-pause-shield {
+position: absolute;
+inset: 0;
+background: rgba(11,18,32,0.94);
+display: flex;
+align-items: center;
+justify-content: center;
+text-align: center;
+padding: 20px;
+color: var(--text);
+font-size: 14px;
+border-radius: 8px;
+z-index: 5;
+pointer-events: auto;
 }
+.youtube-pause-shield.hidden { display: none; pointer-events: none; }
+app.js:2913 Uncaught SyntaxError: Unexpected token '}' (at app.js:2913:1)
+The error at app.js:2913 means your browser is still loading the old file or the file still has an extra closing brace at the end.
 
-function saveResumeState() {
-  const key = resumeStorageKey();
-  if (!key || !activeModuleId || reviewMode) return;
-  if (!timerTotalSeconds || timerSecondsLeft <= 0) return;
+Fix the end of app.js
+Open app.js and go to the final lines. If it ends like this:
 
-  const elapsedSeconds = timerTotalSeconds - timerSecondsLeft;
-  if (elapsedSeconds <= 0) return;
-
-  const state = {
-    courseId: activeCourseId,
-    courseType: activeCourseType,
-    moduleId: activeModuleId,
-    subModuleId: activeSubModuleId || null,
-    elapsedSeconds,
-    pausedAt: Date.now()
-  };
-
-  try {
-    localStorage.setItem(key, JSON.stringify(state));
-  } catch (e) {}
-}
-
-function loadResumeState() {
-  const key = resumeStorageKey();
-  if (!key) return null;
-
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-
-    const state = JSON.parse(raw);
-    if (!state || !state.pausedAt) return null;
-
-    if (Date.now() - state.pausedAt > RESUME_WINDOW_MS) {
-      localStorage.removeItem(key);
-      return null;
-    }
-
-    return state;
-  } catch (e) {
-    return null;
-  }
-}
-
-function clearResumeState() {
-  const key = resumeStorageKey();
-  if (!key) return;
-  try { localStorage.removeItem(key); } catch (e) {}
-}
-
-window.addEventListener('beforeunload', saveResumeState);
-window.addEventListener('pagehide', saveResumeState);
-
-$('auth-toggle-btn').addEventListener('click', () => {
-  isSignupMode = !isSignupMode;
-  $('auth-submit-btn').textContent = isSignupMode ? 'Create account' : 'Log in';
-  $('auth-toggle-text').textContent = isSignupMode ? 'Already have an account?' : 'New to LearnLock?';
-  $('auth-toggle-btn').textContent = isSignupMode ? 'Log in' : 'Create an account';
-  $('auth-error').style.display = 'none';
-});
-
-$('auth-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = $('auth-email').value.trim();
-  const password = $('auth-password').value;
-  const errEl = $('auth-error');
-  errEl.style.display = 'none';
-  $('auth-submit-btn').disabled = true;
-
-  try {
-    if (isSignupMode) {
-      const credential = await auth.createUserWithEmailAndPassword(email, password);
-
-await db.collection('users').doc(credential.user.uid).set({
-  email: email.toLowerCase()
-}, { merge: true });
-
-    } else {
-      await auth.signInWithEmailAndPassword(email, password);
-    }
-  } catch (err) {
-    errEl.textContent = friendlyAuthError(err);
-    errEl.style.display = 'block';
-  } finally {
-    $('auth-submit-btn').disabled = false;
-  }
-});
-$('forgot-password-btn').addEventListener('click', async () => {
-  const email = $('auth-email').value.trim();
-
-  if (!email) {
-    $('auth-error').textContent = 'Enter your email address first.';
-    $('auth-error').style.display = 'block';
-    return;
-  }
-
-  try {
-    await auth.sendPasswordResetEmail(email);
-
-    $('auth-error').textContent =
-      'Password reset email sent. Check your inbox.';
-    $('auth-error').style.display = 'block';
-  } catch (err) {
-    $('auth-error').textContent = friendlyAuthError(err);
-    $('auth-error').style.display = 'block';
-  }
-});
-
-function friendlyAuthError(err) {
-  const code = err.code || '';
-  if (code.includes('invalid-api-key') || code.includes('api-key-not-valid')) {
-    return "Firebase isn't set up yet — open firebase-config.js and follow the setup steps.";
-  }
-  if (code.includes('email-already-in-use')) return 'That email already has an account — try logging in instead.';
-  if (code.includes('weak-password')) return 'Password should be at least 6 characters.';
-  if (code.includes('invalid-email')) return 'That email address looks invalid.';
-  if (code.includes('user-not-found') || code.includes('wrong-password') || code.includes('invalid-credential')) {
-    return 'Email or password is incorrect.';
-  }
-  return err.message || 'Something went wrong. Please try again.';
-}
-
-$('logout-btn').addEventListener('click', () => auth.signOut());
-
-async function loadAndShowDashboard() {
-  showView('loading');
-  try {
-    await loadUserStats();
-    await loadCourses();
-    await loadSharedCourses();
-    renderDashboard();
-    showView('dashboard');
-    if (pendingStreakToast) {
-      toast(pendingStreakToast);
-      pendingStreakToast = null;
-    }
-  } catch (err) {
-    console.error('Failed to load dashboard data:', err);
-    showView('load-error');
-  }
-}
-
-$('btn-retry-load').addEventListener('click', () => {
-  loadAndShowDashboard();
-});
-
-auth.onAuthStateChanged(async (user) => {
-  currentUser = user;
-  if (user) {
-    $('user-email-label').textContent = user.email;
-    await loadAndShowDashboard();
-  } else {
-    showView('auth');
-  }
-});
- 
-async function loadUserStats() {
-    await db.collection('userLookup')
-    .doc(currentUser.email.toLowerCase())
-    .set({
-      uid: currentUser.uid
-    });
-  const ref = db.collection('users').doc(currentUser.uid);
-  const snap = await ref.get();
-  if (snap.exists) {
-    userStats = snap.data();
-    if (userStats.rewards === undefined) userStats.rewards = [];
-    if (userStats.streakMilestones === undefined) userStats.streakMilestones = [];
-    if (userStats.activeDates === undefined) userStats.activeDates = [];
-     if (userStats.learningSessions === undefined) userStats.learningSessions = [];
-    delete userStats.missedDay;
-    delete userStats.challenges;
-
-    if (
-      userStats.lastActiveDate &&
-      daysBetween(userStats.lastActiveDate, todayStr()) > 1 &&
-      userStats.streak > 0
-    ) {
-      if (userStats.points >= STREAK_RECOVERY_COST) {
-        userStats.points -= STREAK_RECOVERY_COST;
-        pendingStreakToast = `🔥 Missed a day, but ${STREAK_RECOVERY_COST} XP kept your ${userStats.streak}-day streak alive!`;
-      } else {
-        const oldStreak = userStats.streak;
-        userStats.streak = 0;
-        userStats.streakMilestones = [];
-        pendingStreakToast = oldStreak > 0
-          ? `😬 You missed a day — your streak reset to 0. Earn ${STREAK_RECOVERY_COST} XP to auto-save it next time.`
-          : null;
-      }
-      await saveUserStats();
-    }
-  } else {
-    userStats = {
-      points: 0,
-      streak: 0,
-      lastActiveDate: null,
-      modulesCompleted: 0,
-      coursesCompleted: 0,
-      achievements: [],
-      rewards: [],
-      streakMilestones: [],
-      activeDates: []
-    };
-    await ref.set(userStats);
-  }
-}
-
-async function saveUserStats() {
-  await db.collection('users').doc(currentUser.uid).set(userStats, { merge: true });
-}
-
-function registerCompletionForStreak() {
-  const today = todayStr();
-  if (userStats.lastActiveDate === today) {
-  } else if (userStats.lastActiveDate && daysBetween(userStats.lastActiveDate, today) === 1) {
-    userStats.streak += 1;
-  } else {
-    userStats.streak = 1;
-  }
-  userStats.lastActiveDate = today;
-}
-
-function checkNewAchievements() {
-  const newlyEarned = [];
-  ACHIEVEMENTS.forEach(a => {
-    if (!userStats.achievements.includes(a.id) && a.check(userStats)) {
-      userStats.achievements.push(a.id);
-      newlyEarned.push(a);
-    }
-  });
-  return newlyEarned;
-}
-
-function checkStreakMilestones() {
-  if (!userStats.streakMilestones) userStats.streakMilestones = [];
-  const newlyReached = [];
-
-  STREAK_MILESTONES.forEach(m => {
-    if (userStats.streak >= m.days && !userStats.streakMilestones.includes(m.days)) {
-      userStats.streakMilestones.push(m.days);
-      userStats.points += m.bonus;
-      newlyReached.push(m);
-    }
-  });
-
-  return newlyReached;
-}
-
-function checkNewRewards() {
-  const newlyEarned = [];
-
-  REWARDS.forEach(reward => {
-    if (
-      userStats.points >= reward.points &&
-      !userStats.rewards.includes(reward.points)
-    ) {
-      userStats.rewards.push(reward.points);
-      newlyEarned.push(reward);
-    }
-  });
-
-  return newlyEarned;
-}
-
-function renderBadges(badges, containerId) {
-  const container = $(containerId);
-  if (!container) return;
-
-  if (!badges || !Array.isArray(badges)) {
-    container.innerHTML = '';
-    return;
-  }
-
-  container.innerHTML = '';
-
-  badges.forEach(badge => {
-    if (!badge || typeof badge !== 'object') return;
-    
-    if (!badge.icon || !badge.label) return;
-
-    const badgeEl = document.createElement('div');
-    badgeEl.className = 'badge';
-    badgeEl.innerHTML = `
-      <div class="badge-icon">${badge.icon}</div>
-      <div class="badge-label">${badge.label}</div>
-    `;
-    container.appendChild(badgeEl);
-  });
-}
-
-function renderStreakMilestones() {
-  const row = $('streak-milestone-row');
-  if (!row) return;
-  row.innerHTML = '';
-
-  if (!userStats.streakMilestones) userStats.streakMilestones = [];
-
-  STREAK_MILESTONES.forEach(m => {
-    const earned = userStats.streakMilestones.includes(m.days);
-    const div = document.createElement('div');
-    div.className = 'badge ' + (earned ? 'earned' : 'locked');
-
-    if (earned) {
-      div.innerHTML = `
-        <span class="badge-icon">🎉</span>
-        <span>${m.days}-day streak — +${m.bonus} XP unlocked!</span>
-      `;
-    } else {
-      const progress = Math.min(userStats.streak, m.days);
-      div.innerHTML = `
-        <span class="badge-icon">🔒</span>
-        <span>${m.days}-day streak (${progress}/${m.days}) — +${m.bonus} XP</span>
-      `;
-    }
-
-    row.appendChild(div);
-  });
-}
-
-function findNextLearningTarget() {
-  const course = coursesCache.find(c => !c.completed && c.modules.some(m => m.status === 'available'));
-  if (!course) return null;
-  const mod = course.modules.find(m => m.status === 'available');
-  if (!mod) return null;
-  const sub = getCurrentSubModule(mod);
-  return { course, mod, sub };
-}
-
-function renderContinueLearningCard() {
-  const el = $('continue-learning-card');
-  if (!el) return;
-
-  const target = findNextLearningTarget();
-  if (!target) {
-    el.style.display = 'none';
-    el.innerHTML = '';
-    return;
-  }
-
-  const resumeState = loadResumeState();
-  const isResumable = resumeState
-    && resumeState.courseId === target.course.id
-    && resumeState.courseType === 'personal'
-    && resumeState.moduleId === target.mod.id
-    && resumeState.subModuleId === (target.sub ? target.sub.id : null);
-
-  const nextLabel = target.sub ? target.sub.name : target.mod.name;
-
-  el.style.display = 'block';
-  el.innerHTML = `
-    <div class="continue-card-label">Continue learning</div>
-    <div class="continue-card-course">${escapeHtml(target.course.name)}</div>
-    <div class="continue-card-next">Next: ${escapeHtml(nextLabel)}</div>
-    <button class="btn-primary" id="btn-continue-learning">${isResumable ? '▶ Continue' : '▶ Start learning'}</button>
-  `;
-
-  $('btn-continue-learning').addEventListener('click', () => {
-    activeCourseId = target.course.id;
-    activeCourseType = 'personal';
-    openModule(target.mod.id);
-  });
-}
-
-function renderLevelBanner() {
-  const el = $('level-banner');
-  if (!el) return;
-  const info = getLevelInfo(userStats.points);
-  const pct = Math.round((info.xpIntoLevel / info.xpForNext) * 100);
-
-  el.innerHTML = `
-    <div class="level-title">${info.icon} Level ${info.level} — ${info.title}</div>
-    <div class="level-xp-bar"><div class="level-xp-fill" style="width:${pct}%"></div></div>
-    <div class="level-xp-text">${info.xpIntoLevel} / ${info.xpForNext} XP to Level ${info.level + 1}</div>
-  `;
-}
-
-function coursesRef() {
-  return db.collection('users').doc(currentUser.uid).collection('courses');
-}
-
-async function loadCourses() {
-  const snap = await coursesRef().get();
-  coursesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
-async function loadSharedCourses() {
-  const snap = await db.collection('sharedCourses')
-    .where('participants', 'array-contains', currentUser.uid)
-    .get();
-  sharedCoursesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
-
-function renderSharedCourses() {
-  const list = $('shared-course-list');
-  if (!list) return;
-  list.innerHTML = '';
-
-  if (sharedCoursesCache.length === 0) {
-    list.innerHTML = '<div class="empty-state">No shared courses yet. Hit "🔗 Share" on one of your courses above.</div>';
-    return;
-  }
-
-  const acceptedCourses = sharedCoursesCache.filter(sc => sc.status === 'accepted');
-
-  if (acceptedCourses.length === 0) {
-    list.innerHTML = '<div class="empty-state">No shared courses yet. Hit "🔗 Share" on one of your courses above.</div>';
-    return;
-  }
-
-  acceptedCourses.forEach(sc => {
-    const friendUid = sc.participants.find(u => u !== currentUser.uid);
-    const friendEmail = sc.emails[friendUid] || 'Friend';
-    const myModules = sc.progress[currentUser.uid] || [];
-    const friendModules = sc.progress[friendUid] || [];
-    const myDone = myModules.filter(m => m.status === 'completed').length;
-    const friendDone = friendModules.filter(m => m.status === 'completed').length;
-    const total = myModules.length;
-
-    const item = document.createElement('div');
-    item.className = 'course-item';
-    item.dataset.courseId = sc.id;
-
-    const myPct = total ? Math.round((myDone / total) * 100) : 0;
-
-    const info = document.createElement('div');
-    info.className = 'course-info';
-    info.innerHTML = `
-      <div class="course-name">${escapeHtml(sc.name)}</div>
-      <div class="course-meta">You: ${myDone}/${total} · ${escapeHtml(friendEmail)}: ${friendDone}/${total}</div>
-      <div class="course-progress-bar"><div class="course-progress-bar-fill" style="width:${myPct}%"></div></div>
-    `;
-
-    const menu = createSharedCourseMenu(sc.id);
-
-    const progress = document.createElement('div');
-    progress.className = 'course-progress-ring';
-    progress.textContent = `${myPct}%`;
-
-    item.appendChild(info);
-    item.appendChild(menu);
-    item.appendChild(progress);
-
-    item.addEventListener('click', () => openSharedCoursePath(sc.id));
-    menu.addEventListener('click', e => e.stopPropagation());
-
-    list.appendChild(item);
-  });
-}
-
-async function getFriendsList() {
-  const snapshot = await db.collection('users').doc(currentUser.uid).collection('friends').get();
-  return snapshot.docs.map(d => ({ uid: d.id, ...d.data() }));
-}
-
-async function openSharePicker(courseId) {
-  const course = getCourse(courseId);
-  if (!course) return;
-  await showSharePanel(course, courseId);
-}
-
-async function showSharePanel(courseLike, anchorId) {
-  const friends = await getFriendsList();
-  if (friends.length === 0) { toast('Add a friend first before sharing a course.'); return; }
-
-  const anchorItem = document.querySelector(`.course-item[data-course-id="${anchorId}"]`);
-  if (!anchorItem) return;
-
-  document.querySelectorAll('.course-share-panel').forEach(p => p.remove());
-
-  const panel = document.createElement('div');
-  panel.className = 'course-share-panel';
-  panel.addEventListener('click', e => e.stopPropagation());
-
-  const title = document.createElement('p');
-  const strong = document.createElement('strong');
-  strong.textContent = `Share "${courseLike.name}" with:`;
-  title.appendChild(strong);
-  panel.appendChild(title);
-
-  friends.forEach(f => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'friend-email-share';
-    btn.textContent = f.email;
-    btn.addEventListener('click', async e => {
-      e.stopPropagation();
-      await shareCourseWithFriend(courseLike, f);
-    });
-    panel.appendChild(btn);
-  });
-
-  const closeBtn = document.createElement('button');
-  closeBtn.type = 'button';
-  closeBtn.className = 'cancel-share';
-  closeBtn.textContent = 'Cancel';
-  closeBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    panel.remove();
-  });
-  panel.appendChild(closeBtn);
-
-  anchorItem.appendChild(panel);
-}
-
-async function shareCourseWithFriend(course, friend) {
-  console.log('SHARING:', { courseName: course.name, friendEmail: friend.email, friendUid: friend.uid });
-  
-  const resetModules = (mods) => mods.map((m, i) => ({
-    id: m.id, name: m.name, startTime: m.startTime, endTime: m.endTime,
-    status: i === 0 ? 'available' : 'locked'
-  }));
-
-  const shareId = `${course.id}_${friend.uid}`;
-  const shareRef = db.collection('sharedCourses').doc(shareId);
-
-  try {
-    const existingSnap = await shareRef.get();
-    if (existingSnap.exists) {
-      const data = existingSnap.data();
-      if (data.status === 'pending' || data.status === 'accepted') {
-        toast(`This course has already been shared with ${friend.email}.`);
-        return;
-      }
-    }
-
-    const shareData = {
-      courseId: course.id,
-      name: course.name,
-      source: course.source,
-      participants: [currentUser.uid, friend.uid],
-      emails: { [currentUser.uid]: currentUser.email, [friend.uid]: friend.email },
-      progress: {
-        [currentUser.uid]: resetModules(course.modules),
-        [friend.uid]: resetModules(course.modules)
-      },
-      status: 'pending',
-      invitedBy: currentUser.uid,
-      createdBy: currentUser.uid,
-      createdAt: Date.now()
-    };
-
-    console.log('WRITING TO FIREBASE:', shareData);
-    await shareRef.set(shareData);
-    console.log('SUCCESS: Course invite sent');
-    toast(`✅ "${course.name}" successfully sent to ${friend.email}.`);
-    document.querySelectorAll('.course-share-panel').forEach(p => p.remove());
-    await loadSharedCourses();
-    renderDashboard();
-    
-  } catch (err) {
-    console.error('SHARING ERROR:', err);
-    toast(`❌ Error sharing course: ${err.message}`);
-  }
-}
-
-async function deleteCourse(courseId) {
-  const course = getCourse(courseId);
-  if (!course) return;
-
-  const confirmed = window.confirm(`Delete "${course.name}"? This can't be undone.`);
-  if (!confirmed) return;
-
-  try {
-    await coursesRef().doc(courseId).delete();
-
-    if (activeCourseId === courseId) {
-      activeCourseId = null;
-      activeModuleId = null;
-      activeCourseType = 'personal';
-    }
-
-    await loadCourses();
-    renderDashboard();
-    toast('Course deleted.');
-  } catch (err) {
-    console.error('Could not delete course:', err);
-    toast('Could not delete the course. Please try again.');
-  }
-}
-
-function closeCourseMenus() {
-  document.querySelectorAll('.course-menu-dropdown').forEach(menu => {
-    menu.classList.remove('open');
-  });
-}
-
-function createGenericCourseMenu(shareLabel, removeLabel, onShare, onRemove) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'course-menu-wrap';
-
-  const menuButton = document.createElement('button');
-  menuButton.type = 'button';
-  menuButton.className = 'course-menu-btn';
-  menuButton.title = 'More options';
-  menuButton.setAttribute('aria-label', 'Course menu');
-  menuButton.textContent = '⋮';
-
-  const dropdown = document.createElement('div');
-  dropdown.className = 'course-menu-dropdown';
-
-  const shareButton = document.createElement('button');
-  shareButton.type = 'button';
-  shareButton.textContent = shareLabel;
-  shareButton.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    closeCourseMenus();
-    await onShare();
-  });
-
-  const removeButton = document.createElement('button');
-  removeButton.type = 'button';
-  removeButton.className = 'danger';
-  removeButton.textContent = removeLabel;
-  removeButton.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    closeCourseMenus();
-    await onRemove();
-  });
-
-  dropdown.appendChild(shareButton);
-  dropdown.appendChild(removeButton);
-
-  menuButton.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const wasOpen = dropdown.classList.contains('open');
-    closeCourseMenus();
-    if (!wasOpen) dropdown.classList.add('open');
-  });
-
-  wrapper.appendChild(menuButton);
-  wrapper.appendChild(dropdown);
-  return wrapper;
-}
-
-function createCourseMenu(courseId) {
-  return createGenericCourseMenu(
-    '🔗 Share course', '🗑 Delete course',
-    () => openSharePicker(courseId),
-    () => deleteCourse(courseId)
-  );
-}
-
-function createSharedCourseMenu(sharedId) {
-  return createGenericCourseMenu(
-    '🔗 Share with another friend', '🗑 Remove',
-    () => openSharePickerForShared(sharedId),
-    () => deleteSharedCourse(sharedId)
-  );
-}
-
-async function openSharePickerForShared(sharedId) {
-  const sc = sharedCoursesCache.find(c => c.id === sharedId);
-  if (!sc) return;
-
-  const courseLike = {
-    id: sc.id,
-    name: sc.name,
-    source: sc.source,
-    modules: sc.progress[currentUser.uid]
-  };
-
-  await showSharePanel(courseLike, sharedId);
-}
-
-async function deleteSharedCourse(sharedId) {
-  const sc = sharedCoursesCache.find(c => c.id === sharedId);
-  if (!sc) return;
-
-  const confirmed = window.confirm(`Remove "${sc.name}" from Shared With Friends? This can't be undone.`);
-  if (!confirmed) return;
-
-  try {
-    await db.collection('sharedCourses').doc(sharedId).delete();
-    if (activeCourseId === sharedId) {
-      activeCourseId = null;
-      activeModuleId = null;
-      activeCourseType = 'personal';
-    }
-    await loadSharedCourses();
-    renderDashboard();
-    toast('Removed.');
-  } catch (err) {
-    console.error('Could not remove shared course:', err);
-    toast('Could not remove it. Please try again.');
-  }
-}
-
-document.addEventListener('click', function (event) {
-  closeCourseMenus();
-
-  const backButton = event.target.closest('.back-link');
-
-  if (!backButton) {
-    return;
-  }
-
-  event.preventDefault();
-
-  const destination = backButton.dataset.nav;
-
-  // Module screen: Back to plan
-  if (destination === 'path') {
-    if (typeof pauseTimer === 'function') {
-      pauseTimer();
-    }
-
-    const moduleView = document.getElementById('view-module');
-    const pathView = document.getElementById('view-path');
-
-    if (moduleView) {
-      moduleView.classList.add('hidden');
-      moduleView.classList.remove('active');
-    }
-
-    if (pathView) {
-      pathView.classList.remove('hidden');
-      pathView.classList.add('active');
-    }
-
-    return;
-  }
-
-  // Path screen: Back to dashboard
-  if (destination === 'dashboard') {
-    const pathView = document.getElementById('view-path');
-    const dashboardView = document.getElementById('view-dashboard');
-
-    if (pathView) {
-      pathView.classList.add('hidden');
-      pathView.classList.remove('active');
-    }
-
-    if (dashboardView) {
-      dashboardView.classList.remove('hidden');
-      dashboardView.classList.add('active');
-    }
-
-    return;
-  }
-});
-
-async function respondToCourseInvite(sharedId, accept) {
-  if (accept) {
-    await db.collection('sharedCourses').doc(sharedId).update({ status: 'accepted' });
-    toast('Course accepted — Day 1 is ready for both of you!');
-  } else {
-    await db.collection('sharedCourses').doc(sharedId).delete();
-    toast('Invite declined.');
-  }
-  await loadSharedCourses();
-  renderDashboard();
-}
-
-function renderIncomingCourseInvites() {
-  const list = $('incoming-invites-list');
-  if (!list) return;
-  list.innerHTML = '';
-
-  const incoming = sharedCoursesCache.filter(
-    sc => sc.status === 'pending' && sc.invitedBy !== currentUser.uid
-  );
-
-  if (incoming.length === 0) {
-    list.innerHTML = '<div class="empty-state">No course invitations yet. Invitations will appear here when someone shares a course with you.</div>';
-    return;
-  }
-
-  incoming.forEach(sc => {
-    const fromEmail = sc.emails[sc.invitedBy] || 'Someone';
-    const div = document.createElement('div');
-    div.className = 'card';
-    div.innerHTML = `
-      <p><strong>${escapeHtml(fromEmail)}</strong> wants to share "${escapeHtml(sc.name)}" with you.</p>
-      <button class="btn-primary btn-accept-invite">Accept</button>
-      <button class="btn-secondary btn-reject-invite">Reject</button>
-    `;
-    div.querySelector('.btn-accept-invite').addEventListener('click', () => respondToCourseInvite(sc.id, true));
-    div.querySelector('.btn-reject-invite').addEventListener('click', () => respondToCourseInvite(sc.id, false));
-    list.appendChild(div);
-  });
-}
-
-function renderOutgoingCourseInvites() {
-  const list = $('outgoing-invites-list');
-  if (!list) return;
-  list.innerHTML = '';
-
-  const outgoing = sharedCoursesCache.filter(
-    sc => sc.status === 'pending' && sc.invitedBy === currentUser.uid
-  );
-
-  if (outgoing.length === 0) {
-    list.innerHTML = '';
-    return;
-  }
-
-  outgoing.forEach(sc => {
-    const friendUid = sc.participants.find(u => u !== currentUser.uid);
-    const friendEmail = sc.emails[friendUid] || 'Friend';
-    const div = document.createElement('div');
-    div.className = 'card';
-    div.innerHTML = `<p>Waiting for <strong>${escapeHtml(friendEmail)}</strong> to accept "${escapeHtml(sc.name)}".</p>`;
-    list.appendChild(div);
-  });
-}
-
-function getActiveCourse() {
-  if (activeCourseType === 'shared') {
-    const sc = sharedCoursesCache.find(c => c.id === activeCourseId);
-    if (!sc) return null;
-    const friendUid = sc.participants.find(u => u !== currentUser.uid);
-    return {
-      name: sc.name, source: sc.source, modules: sc.progress[currentUser.uid],
-      isShared: true, friendEmail: sc.emails[friendUid], friendModules: sc.progress[friendUid]
-    };
-  }
-  const course = getCourse(activeCourseId);
-  if (!course) return null;
-  return { name: course.name, source: course.source, modules: course.modules, isShared: false };
-}
-
-function openSharedCoursePath(sharedCourseId) {
-  activeCourseId = sharedCourseId;
-  activeCourseType = 'shared';
-  renderPath();
-  showView('path');
-}
-
-function activeCourseCount() {
-  return coursesCache.filter(c => !c.completed).length;
-}
-
-function renderDashboard() {
-  $('stat-streak').textContent = userStats.streak;
-  $('stat-points').textContent = userStats.points;
-  $('stat-modules').textContent = userStats.modulesCompleted;
-  $('course-count-note').textContent = `${activeCourseCount()} / ${MAX_ACTIVE_COURSES} active`;
-
-  const list = $('course-list');
-  list.innerHTML = '';
-
-  if (coursesCache.length === 0) {
-    list.innerHTML = `<div class="empty-state">No courses yet. Add one below — paste a YouTube playlist, a Udemy course, anything you're learning from, and break it into modules.</div>`;
-  } else {
-    coursesCache.forEach(course => {
-      const done = course.modules.filter(m => m.status === 'completed').length;
-      const total = course.modules.length;
-      const item = document.createElement('div');
-      item.className = 'course-item';
-      item.dataset.courseId = course.id;
-
-      const pct = total ? Math.round((done / total) * 100) : 0;
-
-      const info = document.createElement('div');
-      info.className = 'course-info';
-      info.innerHTML = `
-        <div class="course-name">${escapeHtml(course.name)}</div>
-        <div class="course-meta">${done} / ${total} modules${course.completed ? ' · Completed 🎉' : ''}</div>
-        <div class="course-progress-bar"><div class="course-progress-bar-fill" style="width:${pct}%"></div></div>
-      `;
-
-      const menu = createCourseMenu(course.id);
-
-      const progress = document.createElement('div');
-      progress.className = 'course-progress-ring';
-      progress.textContent = `${pct}%`;
-
-      item.appendChild(info);
-      item.appendChild(menu);
-      item.appendChild(progress);
-
-      item.addEventListener('click', () => openCoursePath(course.id));
-      menu.addEventListener('click', e => e.stopPropagation());
-
-      list.appendChild(item);
-    });
-  }
-
-  renderBadges();
-  renderContinueLearningCard();
-  renderLevelBanner();
-  renderStreakMilestones();
-  renderLearningProgressCalendar();
-  renderIncomingCourseInvites();
-  renderOutgoingCourseInvites();
-  renderSharedCourses();
-loadFriendRequests();
-loadFriends();
-}
-
-function escapeHtml(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-// YouTube API for Auto-Module Generator
-const YOUTUBE_API_KEY = 'AIzaSyAoaYH1sBAnDxQ9QHJ3vW8Wma6GpGoGyag';
-
-async function fetchYouTubeVideoInfo(videoId) {
-  try {
-    const url = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${YOUTUBE_API_KEY}&part=contentDetails,snippet`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch video info');
-    const data = await response.json();
-    if (!data.items || data.items.length === 0) throw new Error('Video not found');
-    return data.items[0];
-  } catch (err) {
-    console.error('YouTube API error:', err);
-    toast('Could not fetch video info. Make sure the YouTube link is public.');
-    return null;
-  }
-}
-
-function extractVideoIdFromUrl(url) {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
-    /youtube\.com\/embed\/([^&\n?#]+)/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return null;
-}
-
-function parseDuration(isoDuration) {
-  const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
-  const matches = isoDuration.match(regex);
-  const hours = parseInt(matches[1] || 0);
-  const minutes = parseInt(matches[2] || 0);
-  const seconds = parseInt(matches[3] || 0);
-  return hours * 3600 + minutes * 60 + seconds;
-}
-
-function extractChaptersFromDescription(description) {
-  if (!description) return [];
-  const lines = description.split('\n');
-  const chapters = [];
-  const timeRegex = /^(\d{1,2}):(\d{2}):?(\d{2})?\s*-?\s*(.+)/;
-  
-  for (const line of lines) {
-    const match = line.trim().match(timeRegex);
-    if (match) {
-      const hours = parseInt(match[1]);
-      const minutes = parseInt(match[2]);
-      const secs = parseInt(match[3] || 0);
-      const title = match[4].trim();
-      chapters.push({
-        seconds: hours * 3600 + minutes * 60 + secs,
-        title
-      });
-    }
-  }
-  return chapters;
-}
-
-function generateTimeSegments(totalSeconds, segmentMinutes = 15) {
-  const segments = [];
-  const segmentSecs = segmentMinutes * 60;
-  let currentTime = 0;
-  
-  while (currentTime < totalSeconds) {
-    const startTime = currentTime;
-    const endTime = Math.min(currentTime + segmentSecs, totalSeconds);
-    segments.push({
-      seconds: startTime,
-      title: `Module ${segments.length + 1}`,
-      endSeconds: endTime
-    });
-    currentTime = endTime;
-  }
-  
-  return segments;
-}
-
-function secondsToTimeString(seconds) {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-async function autoGenerateModules() {
-  const youtubeUrl = $('auto-youtube-url').value.trim();
-  if (!youtubeUrl) {
-    toast('Paste a YouTube URL first.');
-    return;
-  }
-
-  const videoId = extractVideoIdFromUrl(youtubeUrl);
-  if (!videoId) {
-    toast('Invalid YouTube URL. Paste a link like https://www.youtube.com/watch?v=');
-    return;
-  }
-
-  showPublicVideoWarningModal(() => runAutoGenerate(youtubeUrl));
-}
-
-async function runAutoGenerate(youtubeUrl) {
-  const videoId = extractVideoIdFromUrl(youtubeUrl);
-
-  $('btn-auto-generate').disabled = true;
-  $('btn-auto-generate').textContent = '🔄 Analyzing video';
-
-  const videoInfo = await fetchYouTubeVideoInfo(videoId);
-  if (!videoInfo) {
-    $('btn-auto-generate').disabled = false;
-    $('btn-auto-generate').textContent = '🎬 Analyze & auto-create modules';
-    return;
-  }
-
-  const totalSeconds = parseDuration(videoInfo.contentDetails.duration);
-  const videoTitle = videoInfo.snippet.title;
-  const description = videoInfo.snippet.description || '';
-
-    // Try to extract chapters from description
-  let chapters = extractChaptersFromDescription(description);
-  
-  // If no chapters found, generate 15-min segments
-  if (chapters.length === 0) {
-    chapters = generateTimeSegments(totalSeconds, 15);
-  } else {
-    // Add end time to each chapter
-    for (let i = 0; i < chapters.length; i++) {
-      chapters[i].endSeconds = i + 1 < chapters.length ? chapters[i + 1].seconds : totalSeconds;
-    }
-  }
-
-  // Set course name
-  $('course-name').value = videoTitle;
-  $('course-source').value = youtubeUrl;
-
-  // Clear existing modules
-  $('module-rows').innerHTML = '';
-
-  // Add module rows
-  chapters.forEach(chapter => {
-    const startTime = secondsToTimeString(chapter.seconds);
-    const endTime = secondsToTimeString(chapter.endSeconds);
-    addModuleRow(chapter.title, '', startTime, endTime);
-  });
-
-  toast(`✅ Generated ${chapters.length} modules. Review and click "Create learning plan".`);
-
-  $('btn-auto-generate').disabled = false;
-  $('btn-auto-generate').textContent = '🎬 Analyze & auto-create modules';
-  $('auto-youtube-url').value = '';
-  
-  $('auto-generator-section').style.display = 'none';
-  $('manual-builder-section').style.display = 'block';
-}
-
-$('btn-new-course').addEventListener('click', () => {
-  if (activeCourseCount() >= MAX_ACTIVE_COURSES) {
-    toast(`You've hit the ${MAX_ACTIVE_COURSES}-course limit. Finish or remove one before adding another — it keeps you focused.`);
-    return;
-  }
-  $('course-name').value = '';
-  $('course-source').value = '';
-  $('module-rows').innerHTML = '';
-  $('auto-youtube-url').value = '';
-  $('auto-generator-section').style.display = 'block';
-  $('manual-builder-section').style.display = 'none';
-  showView('builder');
-});
-
-$('btn-auto-generate').addEventListener('click', autoGenerateModules);
-function addSubModuleRow(container, name = '', start = '00:00:00', end = '00:00:00') {
-  const row = document.createElement('div');
-  row.className = 'submodule-row';
-  row.innerHTML = `
-    <div class="field">
-      <input type="text" placeholder="Sub-module name (e.g. 1.1 Basics)" class="submod-name" value="${escapeHtml(name)}" />
-    </div>
-    <div class="field time">
-      <label>Start</label>
-      <input type="text" placeholder="00:00:00" class="submod-start" value="${escapeHtml(start)}" />
-    </div>
-    <div class="field time">
-      <label>End</label>
-      <input type="text" placeholder="00:00:00" class="submod-end" value="${escapeHtml(end)}" />
-    </div>
-    <button type="button" class="remove-module" title="Remove" aria-label="Remove">✕</button>
-  `;
-  row.querySelector('.remove-module').addEventListener('click', () => row.remove());
-  container.appendChild(row);
-}
-
-function timeToSeconds(value) {
-  if (typeof value === 'number') {
-    return Math.floor(value);
-  }
-
-  const parts = String(value || '00:00:00')
-    .trim()
-    .split(':')
-    .map(Number);
-
-  if (parts.some(Number.isNaN)) {
-    return NaN;
-  }
-
-  if (parts.length === 3) {
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  }
-
-  if (parts.length === 2) {
-    return parts[0] * 60 + parts[1];
-  }
-
-  return parts[0];
-}
-
-function secondsToTime(totalSeconds) {
-  totalSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
-
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return [
-    String(hours).padStart(2, '0'),
-    String(minutes).padStart(2, '0'),
-    String(seconds).padStart(2, '0')
-  ].join(':');
-}
-
-function fillGeneratedModuleTimes(chapters, videoDurationSeconds) {
-  const moduleRows = $('module-rows');
-
-  moduleRows.innerHTML = '';
-
-  const validChapters = chapters
-    .map(chapter => ({
-      name: String(chapter.name || chapter.title || '').trim(),
-      startSeconds: timeToSeconds(
-        chapter.startTime ?? chapter.start ?? chapter.timestamp
-      )
-    }))
-    .filter(chapter =>
-      chapter.name &&
-      Number.isFinite(chapter.startSeconds)
-    )
-    .sort((a, b) => a.startSeconds - b.startSeconds);
-
-  if (validChapters.length === 0) {
-    toast('No valid modules with timestamps were generated.');
-    return;
-  }
-
-  const totalDuration = Number(videoDurationSeconds);
-
-  if (!Number.isFinite(totalDuration) || totalDuration <= 0) {
-    toast('Video duration is missing or invalid.');
-    return;
-  }
-
-  for (let i = 0; i < validChapters.length; i++) {
-    const current = validChapters[i];
-    const next = validChapters[i + 1];
-
-    const startSeconds = current.startSeconds;
-    const endSeconds = next
-      ? next.startSeconds
-      : totalDuration;
-
-    if (startSeconds < 0 || endSeconds <= startSeconds) {
-      continue;
-    }
-
-    addModuleRow(
-      current.name,
-      '',
-      secondsToTime(startSeconds),
-      secondsToTime(endSeconds)
-    );
-  }
-}
-
-function addModuleRow(name = '', duration = '', startTime = '00:00:00', endTime = '00:00:00') {
-  const row = document.createElement('div');
-  row.className = 'module-row';
-  row.innerHTML = `
-    <div class="module-row-main">
-      <div class="field">
-        <input type="text" placeholder="Module name (e.g. Introduction)" class="mod-name" value="${escapeHtml(name)}" />
-      </div>
-      <div class="field time">
-    <label>Start</label>
-    <input type="text" placeholder="00:00:00" class="mod-start" value="${escapeHtml(startTime)}" />
-  </div>
-
-  <div class="field time">
-    <label>End</label>
-    <input type="text" placeholder="00:00:00" class="mod-end" value="${escapeHtml(endTime)}" />
-  </div>
-      <button type="button" class="remove-module" title="Remove" aria-label="Remove">✕</button>
-    </div>
-    <div class="submodule-list"></div>
-    <button type="button" class="btn-add-submodule">+ Add sub-module (optional)</button>
-  `;
-  row.querySelector('.remove-module').addEventListener('click', () => row.remove());
-  const subList = row.querySelector('.submodule-list');
-  row.querySelector('.btn-add-submodule').addEventListener('click', () => addSubModuleRow(subList));
-  $('module-rows').appendChild(row);
-}
-
-$('btn-add-module').addEventListener('click', () => addModuleRow());
-
-$('btn-create-plan').addEventListener('click', async () => {
-  const name = $('course-name').value.trim();
-  const source = $('course-source').value.trim();
-  const rows = Array.from(document.querySelectorAll('.module-row'));
-
-  if (!name) { toast('Give your course a name first.'); return; }
-
-  if (source && extractYouTubeId(source)) {
-    showPublicVideoWarningModal(() => finishCreatePlan(name, source, rows));
-    return;
-  }
-
-  await finishCreatePlan(name, source, rows);
-});
-
-async function finishCreatePlan(name, source, rows) {
-  const modules = rows.map(row => {
-    const m = {
-      id: uid(),
-      name: row.querySelector('.mod-name').value.trim(),
-      startTime: row.querySelector('.mod-start').value.trim(),
-      endTime: row.querySelector('.mod-end').value.trim(),
-    };
-
-    const subRows = Array.from(row.querySelectorAll('.submodule-row'));
-    const subModules = subRows.map(subRow => ({
-      id: uid(),
-      name: subRow.querySelector('.submod-name').value.trim(),
-      startTime: subRow.querySelector('.submod-start').value.trim(),
-      endTime: subRow.querySelector('.submod-end').value.trim(),
-    })).filter(s => s.name && s.startTime && s.endTime);
-
-    if (subModules.length > 0) {
-      m.subModules = subModules;
-      if (!m.name) m.name = subModules[0].name;
-      m.startTime = subModules[0].startTime;
-      m.endTime = subModules[subModules.length - 1].endTime;
-    }
-
-    return m;
-  }).filter(m => m.name && m.startTime && m.endTime);
-
-  if (modules.length === 0) {
-    toast('Add at least one module with a name, start time, and end time.');
-    return;
-  }
-
-  for (const m of modules) {
-  const start = timeToSeconds(m.startTime);
-  const end = timeToSeconds(m.endTime);
-
-  if (end <= start) {
-    toast(`End time must be after start time for "${m.name}".`);
-    return;
-  }
-
-  if (m.subModules) {
-    for (const s of m.subModules) {
-      const sStart = timeToSeconds(s.startTime);
-      const sEnd = timeToSeconds(s.endTime);
-      if (sEnd <= sStart) {
-        toast(`End time must be after start time for sub-module "${s.name}".`);
-        return;
-      }
-    }
-  }
-}
-  modules.forEach((m, i) => {
-    m.status = i === 0 ? 'available' : 'locked';
-    if (m.subModules) {
-      m.subModules.forEach((s, j) => { s.status = (i === 0 && j === 0) ? 'available' : 'locked'; });
-    }
-  });
-
-  const docRef = await coursesRef().add({
-    name,
-    source,
-    modules,
-    completed: false,
-    createdAt: Date.now(),
-  });
-
-  await loadCourses();
-  toast('Learning plan created — Day 1 is ready.');
-  openCoursePath(docRef.id);
-}
-
-function getCourse(courseId) {
-  return coursesCache.find(c => c.id === courseId);
-}
-
-function getCurrentSubModule(mod) {
-  if (!mod.subModules || mod.subModules.length === 0) return null;
-  return mod.subModules.find(s => s.status === 'available') || null;
-}
-
-function getActiveUnit(course) {
-  const mod = course.modules.find(m => m.id === activeModuleId);
-  if (!mod) return null;
-  if (activeSubModuleId) {
-    return (mod.subModules || []).find(s => s.id === activeSubModuleId) || mod;
-  }
-  return mod;
-}
-
-function openCoursePath(courseId) {
-  activeCourseId = courseId;
-  activeCourseType = 'personal';
-  renderPath();
-  showView('path');
-}
-
-function renderPath() {
-  const course = getActiveCourse();
-  if (!course) return;
-
-  $('path-course-title').textContent = course.name;
-  const done = course.modules.filter(m => m.status === 'completed').length;
-  $('path-course-meta').textContent = `${done} / ${course.modules.length} modules complete`
-    + (course.source ? ` · ${course.source}` : '')
-    + (course.isShared ? ` · ${escapeHtml(course.friendEmail)}: ${course.friendModules.filter(m => m.status === 'completed').length}/${course.modules.length}` : '');
-  const container = $('path-container');
-  container.innerHTML = '';
-
-  course.modules.forEach((mod, i) => {
-    const node = document.createElement('div');
-    node.className = 'path-node ' + mod.status;
-
-    const dotContent = mod.status === 'completed' ? '✓' : String(i + 1);
-    const statusText = mod.status === 'completed' ? 'Completed'
-      : mod.status === 'available' ? 'Available today'
-      : 'Locked — finish the module above first';
-
-    const currentSub = mod.status === 'available' ? getCurrentSubModule(mod) : null;
-    const hasSubModules = mod.subModules && mod.subModules.length > 0;
-
-    const durationText = hasSubModules
-      ? `${mod.subModules.filter(s => s.status === 'completed').length}/${mod.subModules.length} sub-modules complete`
-      : `${mod.startTime} → ${mod.endTime}`;
-
-    const resumeState = mod.status === 'available' ? loadResumeState() : null;
-    const isResumable = resumeState
-      && resumeState.courseId === activeCourseId
-      && resumeState.courseType === activeCourseType
-      && resumeState.moduleId === mod.id
-      && resumeState.subModuleId === (currentSub ? currentSub.id : null);
-
-    const subListHtml = hasSubModules
-      ? `<div class="submodule-progress-list">${mod.subModules.map((s, si) => {
-          const subIcon = s.status === 'completed' ? '✓' : s.status === 'available' ? '▶' : '🔒';
-          const rewatchBtn = s.status === 'completed'
-            ? `<button class="btn-rewatch" data-mod="${mod.id}" data-sub="${s.id}">▶ Watch again</button>`
-            : '';
-          return `<div class="submodule-progress-item ${s.status}">
-            <span class="submodule-progress-icon">${subIcon}</span>
-            <span class="submodule-progress-label">${i + 1}.${si + 1} ${escapeHtml(s.name)}</span>
-            ${rewatchBtn}
-          </div>`;
-        }).join('')}</div>`
-      : '';
-
-    const rewatchModuleBtn = (mod.status === 'completed' && !hasSubModules)
-      ? `<button class="btn-rewatch" data-mod="${mod.id}">▶ Watch again</button>`
-      : '';
-
-    node.innerHTML = `
-      <div class="node-dot">${dotContent}</div>
-      <div class="node-card">
-        <div class="node-day">Day ${i + 1}${currentSub ? ` · ${escapeHtml(currentSub.name)}` : ''}</div>
-        <div class="node-title">${escapeHtml(mod.name)}</div>
-        <div class="node-duration">${durationText}</div>
-        ${subListHtml}
-        <div class="node-status">${statusText}</div>
-        ${mod.status === 'available' ? `<button class="btn-start" data-mod="${mod.id}">${isResumable ? '▶ Continue module' : 'Start module'}</button>` : ''}
-        ${rewatchModuleBtn}
-      </div>
-    `;
-    container.appendChild(node);
-  });
-
-  container.querySelectorAll('.btn-start').forEach(btn => {
-    btn.addEventListener('click', () => openModule(btn.dataset.mod));
-  });
-
-  container.querySelectorAll('.btn-rewatch').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openModuleForReview(btn.dataset.mod, btn.dataset.sub || null);
-    });
-  });
-}
-
-window.onYouTubeIframeAPIReady = function () {
-  youtubeAPIReady = true;
-
-  if (pendingYouTubeRequest) {
-    const { videoId, startSeconds } = pendingYouTubeRequest;
-
-    pendingYouTubeRequest = null;
-
-    createYouTubePlayer(videoId, startSeconds);
-  }
-};
-
-function extractYouTubeId(url) {
-  if (!url) return null;
-
-  const trimmed = String(url).trim();
-
-  try {
-    const parsedUrl = new URL(trimmed);
-    const host = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
-
-    if (host === 'youtu.be') {
-      return parsedUrl.pathname
-        .split('/')
-        .filter(Boolean)[0] || null;
-    }
-
-    if (
-      host === 'youtube.com' ||
-      host === 'm.youtube.com' ||
-      host === 'music.youtube.com'
-    ) {
-      if (parsedUrl.pathname === '/watch') {
-        return parsedUrl.searchParams.get('v');
-      }
-
-      const pathParts = parsedUrl.pathname
-        .split('/')
-        .filter(Boolean);
-
-      if (
-        pathParts[0] === 'embed' ||
-        pathParts[0] === 'shorts' ||
-        pathParts[0] === 'live'
-      ) {
-        return pathParts[1] || null;
-      }
-    }
-  } catch (error) {
-    // Allow a plain 11-character YouTube video ID
-    if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
-      return trimmed;
-    }
-  }
-
-  return null;
-}
-
-
-function isAdPlaying() {
-  if (
-    !youtubePlayer ||
-    typeof youtubePlayer.getVideoData !== 'function'
-  ) {
-    return false;
-  }
-
-  try {
-    const data = youtubePlayer.getVideoData();
-
-    if (!data || !data.video_id) {
-      return false;
-    }
-
-    return Boolean(
-      currentCourseVideoId &&
-      data.video_id !== currentCourseVideoId
-    );
-  } catch (error) {
-    return false;
-  }
-}
-
-
-function checkYouTubeSkip() {
-  if (
-    reviewMode ||
-    !youtubePlayer ||
-    typeof youtubePlayer.getCurrentTime !== 'function'
-  ) {
-    return false;
-  }
-
-  const currentTime = youtubePlayer.getCurrentTime();
-  const allowedTime = youtubeMaxWatchedSeconds + 1;
-
-  if (currentTime > allowedTime) {
-    youtubePlayer.seekTo(youtubeMaxWatchedSeconds, true);
-    return true;
-  }
-
-  youtubeMaxWatchedSeconds = Math.max(
-    youtubeMaxWatchedSeconds,
-    currentTime
-  );
-
-  return false;
-}
-
-
-function startForwardSeekProtection() {
-  stopForwardSeekProtection();
-
-  if (
-    reviewMode ||
-    !youtubePlayer ||
-    typeof youtubePlayer.getCurrentTime !== 'function'
-  ) {
-    return;
-  }
-
-  youtubeSeekProtectionInterval = setInterval(() => {
-    checkYouTubeSkip();
-  }, 100);
-}
-
-
-function stopForwardSeekProtection() {
-  if (youtubeSeekProtectionInterval) {
-    clearInterval(youtubeSeekProtectionInterval);
-    youtubeSeekProtectionInterval = null;
-  }
-}
-
-// Shows/hides a cover over the video whenever it's paused, so YouTube's
-// own "more videos" suggestion panel (which YouTube shows automatically
-// on pause and can't be turned off via player settings) is hidden and
-// un-clickable. The cover only ever appears while paused; playing
-// (course video OR an ad) always hides it again.
-function showPauseShield() {
-  const shield = $('youtube-pause-shield');
-  if (shield) shield.classList.remove('hidden');
-}
-
-function hidePauseShield() {
-  const shield = $('youtube-pause-shield');
-  if (shield) shield.classList.add('hidden');
-}
-
-function onYouTubeStateChange(event) {
-  if (event.data === YT.PlayerState.UNSTARTED) {
-    try {
-      let skipBtn = document.querySelector('.ytp-ad-skip-button');
-      if (!skipBtn) skipBtn = document.querySelector('[aria-label*="Skip"]');
-      if (skipBtn) skipBtn.click();
-    } catch (e) {}
-  }
-
-  if (event.data === YT.PlayerState.PLAYING) {
-    hidePauseShield(); // playing — whether it's the course video or an ad, no cover needed
-
-    if (isAdPlaying()) {
-      $('timer-label').textContent = '⏸ Ad playing — timer paused';
-      if (timerRunning) {
-        timerRunning = false;
-        clearInterval(timerInterval);
-        $('btn-timer-pause').style.display = 'none';
-        $('btn-timer-start').style.display = 'inline-block';
-        $('btn-timer-start').textContent = '▶ Resume';
-      }
-      return;
-    }
-
-    if (timerSecondsLeft > 0 && !timerRunning && $('btn-timer-start').dataset.playRequested === 'true') {
-      startTimerInterval();
-      $('btn-timer-start').dataset.playRequested = 'false';
-    }
-  }
-
-  if (event.data === YT.PlayerState.PAUSED) {
-    showPauseShield(); // paused — cover the video so YouTube's suggestion panel can't be seen/clicked
-
-    if (timerRunning) {
-      timerRunning = false;
-      clearInterval(timerInterval);
-
-      $('btn-timer-pause').style.display = 'none';
-      $('btn-timer-start').style.display = 'inline-block';
-      $('btn-timer-start').textContent = '▶ Resume';
-    }
-  }
-}
-
-function startTimerInterval() {
-  timerRunning = true;
-  $('btn-timer-start').style.display = 'none';
-  $('btn-timer-pause').style.display = 'inline-block';
-  $('timer-label').textContent = 'Time remaining';
-
-  timerInterval = setInterval(() => {
-    if (isAdPlaying()) {
-      $('timer-label').textContent = '⏸ Ad playing — timer paused';
-      timerRunning = false;
-      clearInterval(timerInterval);
-      $('btn-timer-pause').style.display = 'none';
-      $('btn-timer-start').style.display = 'inline-block';
-      $('btn-timer-start').textContent = '▶ Resume';
-      return;
-    }
-
-    if (checkYouTubeSkip()) {
-      return;
-    }
-
-    if (timerSecondsLeft > 0) {
-      timerSecondsLeft -= 1;
-      updateTimerDisplay();
-    }
-
-    if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
-      const course = getActiveCourse();
-      const mod = getActiveUnit(course);
-
-      if (mod) {
-        const endSeconds = timeToSeconds(mod.endTime);
-        const currentSeconds = youtubePlayer.getCurrentTime();
-
-        if (currentSeconds >= endSeconds && youtubeMaxWatchedSeconds >= endSeconds) {
-          youtubePlayer.pauseVideo();
-          timerSecondsLeft = 0;
-          updateTimerDisplay();
-          $('btn-complete-module').disabled = false;
-        }
-      }
-    }
-
-   if (timerSecondsLeft <= 0) {
-  clearInterval(timerInterval);
-  timerRunning = false;
-  $('btn-timer-pause').style.display = 'none';
-  
-  // STOP VIDEO when timer reaches 00:00:00
-  if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
-    youtubePlayer.pauseVideo();
-  }
-}
-  }, 1000);
-}
-
-function onPlayerReady(event) {
-  const player = event.target;
-
-  startForwardSeekProtection();
-
-  const skipAdsInterval = setInterval(() => {
-    try {
-      const skipButton =
-        document.querySelector('.ytp-ad-skip-button') ||
-        document.querySelector('button.ytp-ad-skip-button-modern') ||
-        document.querySelector('.ytp-ad-skip-button-modern') ||
-        document.querySelector('[aria-label="Skip ad"]') ||
-        document.querySelector('[aria-label="Skip Ad"]') ||
-        Array.from(document.querySelectorAll('button')).find(btn =>
-          btn.textContent.includes('Skip') &&
-          btn.offsetParent !== null
-        );
-
-      if (skipButton && skipButton.offsetParent !== null) {
-        skipButton.click();
-        console.log('Ad skipped');
-        clearInterval(skipAdsInterval);
-      }
-    } catch (e) {}
-  }, 300);
-
-  setTimeout(() => clearInterval(skipAdsInterval), 20000);
-}
-
-function createYouTubePlayer(videoId, startSeconds = 0) {
-  if (!videoId) {
-    toast('YouTube video ID is missing.');
-    return;
-  }
-
-  currentCourseVideoId = videoId;
-  const createPlayer = () => {
-    if (
-      typeof window.YT === 'undefined' ||
-      typeof window.YT.Player === 'undefined'
-    ) {
-      toast('YouTube player is still loading. Please try again.');
-      return;
-    }
-
-    const playerContainer = document.getElementById('youtube-player');
-
-    if (!playerContainer) {
-      toast('YouTube player area was not found.');
-      return;
-    }
-
-    if (
-      youtubePlayer &&
-      typeof youtubePlayer.destroy === 'function'
-    ) {
-      youtubePlayer.destroy();
-      youtubePlayer = null;
-    }
-
-    playerContainer.innerHTML = '';
-
-    youtubePlayer = new YT.Player('youtube-player', {
-      videoId: videoId,
-      playerVars: {
-        autoplay: 0,
-        controls: 1,
-        disablekb: 1,
-        fs: 1,
-        cc_load_policy: 0,
-        iv_load_policy: 3,
-        rel: 0,
-        start: Math.max(0, Math.floor(startSeconds)),
-        modestbranding: 1,
-        playsinline: 1
-      },
-      events: {
-        onReady: onPlayerReady,
-        onStateChange: onYouTubeStateChange,
-        onError: function (event) {
-          console.error('YouTube player error code:', event.data);
-
-          if (event.data === 101 || event.data === 150) {
-            toast('This video does not allow embedded playback.');
-          } else if (event.data === 100) {
-            toast('This video is unavailable or private.');
-          } else {
-            toast('YouTube could not play this video.');
-          }
-        }
-      }
-    });
-  };
-
-  if (
-    typeof window.YT !== 'undefined' &&
-    typeof window.YT.Player !== 'undefined'
-  ) {
-    createPlayer();
-  } else {
-    window.onYouTubeIframeAPIReady = createPlayer;
-  }
-}
-
-function openModule(moduleId) {
-  reviewMode = false;
-  activeModuleId = moduleId;
-  const course = getActiveCourse();
-  const mod = course.modules.find(m => m.id === moduleId);
-  const dayIndex = course.modules.findIndex(m => m.id === moduleId);
-
-  const currentSub = getCurrentSubModule(mod);
-  activeSubModuleId = currentSub ? currentSub.id : null;
-  const unit = currentSub || mod;
-
-  $('module-day-tag').textContent = `Day ${dayIndex + 1}${currentSub ? ` · ${currentSub.name}` : ''}`;
-  $('module-title').textContent = currentSub ? `${mod.name} — ${currentSub.name}` : mod.name;
-
-  const resumeState = loadResumeState();
-  const isResuming = resumeState
-    && resumeState.courseId === activeCourseId
-    && resumeState.courseType === activeCourseType
-    && resumeState.moduleId === moduleId
-    && resumeState.subModuleId === activeSubModuleId;
-
-  const unitStartSeconds = timeToSeconds(unit.startTime);
-  timerTotalSeconds = timeToSeconds(unit.endTime) - unitStartSeconds;
-  const resumeElapsed = isResuming ? Math.min(resumeState.elapsedSeconds, timerTotalSeconds) : 0;
-  const videoStartSeconds = unitStartSeconds + resumeElapsed;
-
-stopForwardSeekProtection();
-
-if (youtubePlayer) {
-  youtubePlayer.destroy();
-  youtubePlayer = null;
-}
-
-const videoId = extractYouTubeId(course.source);
-const playerContainer = $('youtube-player');
-
-if (!videoId) {
-  playerContainer.innerHTML = '<div class="video-missing">⚠️ No playable video found. Paste a direct video link (open the video, copy the URL from the address bar) — not a playlist link.</div>';
-} else if (!youtubeAPIReady) {
-  playerContainer.innerHTML = '<div class="video-missing">Loading player…</div>';
-  pendingYouTubeRequest = {
-    videoId,
-    startSeconds: videoStartSeconds
-  };
-} else {
-  createYouTubePlayer(videoId, videoStartSeconds);
-}
-
-startForwardSeekProtection();   
-
-youtubeMaxWatchedSeconds = videoStartSeconds;
-
-timerSecondsLeft = timerTotalSeconds - resumeElapsed;
-timerRunning = false;
-clearInterval(timerInterval);
-
-if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
-  youtubePlayer.pauseVideo();
-}
-
-showPauseShield(); // module opens paused, so keep the shield up until Start/Continue is pressed
-
-updateTimerDisplay();
-$('btn-timer-start').style.display = 'inline-block';
-$('btn-timer-start').textContent = isResuming ? '▶ Continue' : '▶ Start learning';
-$('btn-timer-pause').style.display = 'none';
-$('btn-complete-module').style.display = 'block';
-$('btn-complete-module').textContent = 'Complete module';
-const extraNoteEl = document.querySelector('#view-module .extra-note');
-if (extraNoteEl) extraNoteEl.style.display = 'block';
-
-showView('module');
-monitorAndSkipAds();
-}
-
-function openModuleForReview(moduleId, subModuleId) {
-  reviewMode = true;
-  activeModuleId = moduleId;
-  activeSubModuleId = subModuleId || null;
-
-  const course = getActiveCourse();
-  const mod = course.modules.find(m => m.id === moduleId);
-  if (!mod) return;
-  const unit = subModuleId ? (mod.subModules || []).find(s => s.id === subModuleId) : mod;
-  if (!unit) return;
-
-  const dayIndex = course.modules.findIndex(m => m.id === moduleId);
-  $('module-day-tag').textContent = `Day ${dayIndex + 1}${subModuleId ? ` · ${unit.name}` : ''} · Replay`;
-  $('module-title').textContent = subModuleId ? `${mod.name} — ${unit.name}` : mod.name;
-
-  if (youtubePlayer) {
-    youtubePlayer.destroy();
-    youtubePlayer = null;
-  }
-
-  const videoId = extractYouTubeId(course.source);
-  const playerContainer = $('youtube-player');
-  const unitStartSeconds = timeToSeconds(unit.startTime);
-  const unitEndSeconds = timeToSeconds(unit.endTime);
-
-  if (!videoId) {
-    playerContainer.innerHTML = '<div class="video-missing">⚠️ No playable video found.</div>';
-  } else if (!youtubeAPIReady) {
-    playerContainer.innerHTML = '<div class="video-missing">Loading player…</div>';
-    pendingYouTubeRequest = { videoId, startSeconds: unitStartSeconds };
-  } else {
-    createYouTubePlayer(videoId, unitStartSeconds);
-  }
-
-  timerTotalSeconds = unitEndSeconds - unitStartSeconds;
-  youtubeMaxWatchedSeconds = unitEndSeconds;
-  timerSecondsLeft = 0;
-  timerRunning = false;
-  clearInterval(timerInterval);
-
-  if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
-    youtubePlayer.pauseVideo();
-  }
-
-  showPauseShield();
-
-  $('timer-display').textContent = formatTime(timerTotalSeconds);
-  $('timer-display').classList.remove('done');
-  $('timer-label').textContent = '📼 Replay — this won\'t affect your progress';
-  $('btn-timer-start').style.display = 'inline-block';
-  $('btn-timer-start').textContent = '▶ Play';
-  $('btn-timer-pause').style.display = 'none';
-  $('btn-complete-module').style.display = 'none';
-  const extraNoteEl = document.querySelector('#view-module .extra-note');
-  if (extraNoteEl) extraNoteEl.style.display = 'none';
-
-  showView('module');
-}
-
-function updateTimerDisplay() {
-  const display = $('timer-display');
-  display.textContent = formatTime(timerSecondsLeft);
-
-  if (timerSecondsLeft <= 0) {
-    display.classList.add('done');
-    $('timer-label').textContent = 'Ready to complete!';
-    $('btn-complete-module').disabled = false;
-  } else {
-    display.classList.remove('done');
-    $('timer-label').textContent = 'Time remaining';
-    $('btn-complete-module').disabled = true;
-  }
-}
-
-$('btn-timer-start').addEventListener('click', () => {
-  if (timerRunning) return;
-
-  $('btn-timer-start').dataset.playRequested = 'true';
-
-  if (youtubePlayer && typeof youtubePlayer.playVideo === 'function') {
-    youtubePlayer.playVideo();
-    checkYouTubeSkip();
-  }
-
-  $('btn-timer-start').style.display = 'none';
-  $('btn-timer-pause').style.display = 'inline-block';
-});
-
-$('btn-timer-pause').addEventListener('click', () => {
-  if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
-    youtubePlayer.pauseVideo();
-  }
-
-  checkYouTubeSkip();
-
-  timerRunning = false;
-  clearInterval(timerInterval);
-
-  $('btn-timer-pause').style.display = 'none';
-  $('btn-timer-start').style.display = 'inline-block';
-  $('btn-timer-start').textContent = '▶ Resume';
-});
-
-$('btn-complete-module').addEventListener('click', async () => {
-  if (reviewMode) return;
-
-  stopForwardSeekProtection();
-  clearInterval(timerInterval);
-
-  $('btn-complete-module').disabled = true;
-  $('btn-complete-module').textContent = 'Saving…';
-
-  const course = getActiveCourse();
-  const modules = course.modules;
-  const idx = modules.findIndex(m => m.id === activeModuleId);
-  const mod = modules[idx];
-
-  if (activeSubModuleId) {
-    const subIdx = mod.subModules.findIndex(s => s.id === activeSubModuleId);
-    mod.subModules[subIdx].status = 'completed';
-    const isLastSub = subIdx + 1 >= mod.subModules.length;
-
-    if (!isLastSub) {
-      mod.subModules[subIdx + 1].status = 'available';
-      clearResumeState();
-
-      if (activeCourseType === 'shared') {
-        await db.collection('sharedCourses').doc(activeCourseId).update({
-          [`progress.${currentUser.uid}`]: modules
-        });
-      } else {
-        await coursesRef().doc(activeCourseId).update({ modules });
-      }
-
-      await loadCourses();
-      await loadSharedCourses();
-      toast(`✓ "${mod.subModules[subIdx].name}" complete — next: ${mod.subModules[subIdx + 1].name}`);
-      openModule(activeModuleId);
-      return;
-    }
-  }
-
-  clearResumeState();
-  modules[idx].status = 'completed';
-
-  let courseJustCompleted = false;
-  if (idx + 1 < modules.length) {
-    modules[idx + 1].status = 'available';
-  } else {
-    courseJustCompleted = true;
-  }
-
-  if (activeCourseType === 'shared') {
-    await db.collection('sharedCourses').doc(activeCourseId).update({
-      [`progress.${currentUser.uid}`]: modules
-    });
-  } else {
-    const personalCourse = getCourse(activeCourseId);
-    personalCourse.completed = personalCourse.completed || courseJustCompleted;
-    await coursesRef().doc(personalCourse.id).update({
-      modules,
-      completed: personalCourse.completed
-    });
-  }
-
-  const levelBefore = getLevelInfo(userStats.points).level;
-
-  userStats.modulesCompleted += 1;
-  userStats.points += POINTS_PER_MODULE;
-  registerCompletionForStreak();
-
-  if (!userStats.activeDates) userStats.activeDates = [];
-  const todayForCalendar = todayStr();
-  if (!userStats.activeDates.includes(todayForCalendar)) {
-    userStats.activeDates.push(todayForCalendar);
-  }
-
-const unit = activeSubModuleId 
-  ? (mod.subModules || []).find(s => s.id === activeSubModuleId) 
-  : mod;
-
-if (unit) {
-  const unitStartSeconds = timeToSeconds(unit.startTime);
-  const unitEndSeconds = timeToSeconds(unit.endTime);
-  const sessionMinutes = Math.round((unitEndSeconds - unitStartSeconds) / 60);
-  
-  recordLearningSession(
-    todayForCalendar,
-    activeCourseId,
-    course.name,
-    activeModuleId,
-    unit.name,
-    sessionMinutes
-  );
-}
-
-  const newMilestones = checkStreakMilestones();
-  if (courseJustCompleted && activeCourseType === 'personal') userStats.coursesCompleted += 1;
-  const newBadges = checkNewAchievements();
-  const newRewards = checkNewRewards();
-  const levelAfter = getLevelInfo(userStats.points);
-  await saveUserStats();
-  await loadCourses();
-  await loadSharedCourses();
-
-  let msg = `+${POINTS_PER_MODULE} XP`;
-  if (newMilestones.length) {
-    newMilestones.forEach(m => { msg += ` · 🔥 +${m.bonus} XP for ${m.days}-day streak!`; });
-  }
-  msg += ` · 🔥 ${userStats.streak}-day streak`;
-  if (courseJustCompleted) msg = `🎉 Course completed! ${msg}`;
-  toast(msg);
-
-  if (levelAfter.level > levelBefore) {
-    setTimeout(() => toast(`🎉 LEVEL UP! You reached Level ${levelAfter.level} — ${levelAfter.icon} ${levelAfter.title}`), 3400);
-  }
-
-  if (newBadges.length) {
-    setTimeout(() => toast(`Achievement unlocked: ${newBadges[0].icon} ${newBadges[0].label}`), 5100);
-  }
-
-  if (newRewards.length) {
-  setTimeout(() => toast(`🎁 Reward unlocked: ${newRewards[0].icon} ${newRewards[0].label}`), 6800);
-}
-
-  renderDashboard();
-  if (activeCourseType === 'shared') {
-    renderPath();
-    showView('path');
-  } else {
-    renderPath();
-    showView('path');
-  }
-});
-
-$('btn-add-friend').addEventListener('click', async () => {
-  const email = $('friend-email-input').value.trim().toLowerCase();
-
-  if (!email) {
-    toast("Enter your friend's email.");
-    return;
-  }
-
-  if (email === currentUser.email.toLowerCase()) {
-    toast("You can't add yourself.");
-    return;
-  }
-
-  try {
-   console.log('STEP 1: checking userLookup');
-    const lookupSnap = await db.collection('userLookup')
-  .doc(email)
-  .get();
-  console.log('STEP 2: userLookup worked', lookupSnap.exists);
-
-if (!lookupSnap.exists) {
-  toast('No LearnLock user found with that email.');
-  return;
-}
-
-const friendUid = lookupSnap.data().uid;
-
-const alreadyFriend = await db.collection('users')
-  .doc(currentUser.uid)
-  .collection('friends')
-  .doc(friendUid)
-  .get();
-
-if (alreadyFriend.exists) {
-  toast("You're already friends with this person.");
-  return;
-}
-
-console.log('CURRENT USER UID:', currentUser.uid);
-console.log('FRIEND UID:', friendUid);
-console.log('REQUEST PATH:', `users/${friendUid}/friendRequests/${currentUser.uid}`);
-
-   console.log('FIREBASE PROJECT:', firebase.app().options.projectId);
-console.log('AUTH UID:', firebase.auth().currentUser.uid);
-await db.collection('users')
-  .doc(friendUid)
-      .collection('friendRequests')
-      .doc(currentUser.uid)
-      .set({
-        fromUid: currentUser.uid,
-        fromEmail: currentUser.email,
-        createdAt: Date.now(),
-        status: 'pending'
-      });
-
-    $('friend-email-input').value = '';
-
-    toast('Friend request sent!');
-
-  } catch (err) {
-    console.error(err);
-    toast('Could not send friend request.');
-  }
-});
-
-async function loadFriendRequests() {
-  const list = $('friend-requests-list');
-
-  if (!list || !currentUser) return;
-
-  list.innerHTML = '';
-
-  try {
-    const snapshot = await db.collection('users')
-      .doc(currentUser.uid)
-      .collection('friendRequests')
-      .where('status', '==', 'pending')
-      .get();
-
-    if (snapshot.empty) {
-      list.innerHTML = '<p>No pending friend requests.</p>';
-      return;
-    }
-
-    snapshot.forEach(doc => {
-      const request = doc.data();
-
-      const div = document.createElement('div');
-      div.className = 'card';
-
-      div.innerHTML = `
-        <p><strong>${request.fromEmail}</strong> wants to be your friend.</p>
-        <button class="btn-primary btn-accept-friend">Accept</button>
-        <button class="btn-secondary btn-reject-friend">Reject</button>
-      `;
-
-      div.querySelector('.btn-accept-friend').addEventListener('click', async () => {
-        await acceptFriendRequest(doc.id, request);
-      });
-
-      div.querySelector('.btn-reject-friend').addEventListener('click', async () => {
-        await rejectFriendRequest(doc.id);
-      });
-
-      list.appendChild(div);
-    });
-
-  } catch (err) {
-    console.error(err);
-    list.innerHTML = '<p>Could not load friend requests.</p>';
-  }
-}
-
-async function acceptFriendRequest(requestId, request) {
-  try {
-    await db.collection('users')
-      .doc(currentUser.uid)
-      .collection('friends')
-      .doc(request.fromUid)
-      .set({
-        uid: request.fromUid,
-        email: request.fromEmail,
-        addedAt: Date.now()
-      });
-
-        await db.collection('users')
-      .doc(currentUser.uid)
-      .collection('friendRequests')
-      .doc(requestId)
-      .update({
-        status: 'accepted'
-      });
-
-    await db.collection('users')
-      .doc(request.fromUid)
-      .collection('friends')
-      .doc(currentUser.uid)
-      .set({
-        uid: currentUser.uid,
-        email: currentUser.email,
-        addedAt: Date.now()
-      });
-
-    toast('Friend request accepted!');
-
-    await loadFriendRequests();
-
-  } catch (err) {
-    console.error(err);
-    toast('Could not accept friend request.');
-  }
-}
-
-async function rejectFriendRequest(requestId) {
-  try {
-    await db.collection('users')
-      .doc(currentUser.uid)
-      .collection('friendRequests')
-      .doc(requestId)
-      .delete();
-
-    toast('Friend request declined.');
-
-    await loadFriendRequests();
-
-  } catch (err) {
-    console.error(err);
-    toast('Could not decline friend request.');
-  }
-}
-
-async function loadFriends() {
-  const list = $('friends-list');
-  if (!list || !currentUser) return;
-
-  list.innerHTML = '';
-
-  try {
-    const snapshot = await db.collection('users')
-      .doc(currentUser.uid)
-      .collection('friends')
-      .get();
-
-    if (snapshot.empty) {
-      list.innerHTML = '<div class="empty-state">No friends yet — add one from the dashboard.</div>';
-      return;
-    }
-
-    snapshot.forEach(doc => {
-      const friend = doc.data();
-
-      const div = document.createElement('div');
-      div.className = 'friend-item';
-
-      div.innerHTML = `
-        <span class="friend-avatar">👤</span>
-        <span class="friend-email">${escapeHtml(friend.email)}</span>
-      `;
-
-      list.appendChild(div);
-    });
-
-  } catch (err) {
-    console.error(err);
-    list.innerHTML = '<p>Could not load friends.</p>';
-  }
-}
-
-function createLearningSession(date, courseId, courseTitle, moduleId, moduleTitle, minutes, xpEarned = 50) {
-  return {
-    date,
-    courseId,
-    courseTitle,
-    moduleId,
-    moduleTitle,
-    minutes,
-    completed: true,
-    xpEarned
-  };
-}
-
-function recordLearningSession(date, courseId, courseTitle, moduleId, moduleTitle, minutes) {
-  if (!userStats.learningSessions) userStats.learningSessions = [];
-  const session = createLearningSession(date, courseId, courseTitle, moduleId, moduleTitle, minutes);
-  userStats.learningSessions.push(session);
-}
-
-function getSessionsForDate(dateStr) {
-  if (!userStats.learningSessions) return [];
-  return userStats.learningSessions.filter(s => s.date === dateStr);
-}
-
-function getTotalMinutesForDate(dateStr) {
-  const sessions = getSessionsForDate(dateStr);
-  return sessions.reduce((total, s) => total + (s.minutes || 0), 0);
-}
-
-function getTotalMinutesForWeek(weekStartDate) {
-  let total = 0;
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(weekStartDate);
-    d.setDate(d.getDate() + i);
-    const dateStr = toLocalDateStr(d);
-    total += getTotalMinutesForDate(dateStr);
-  }
-  return total;
-}
-
-function getTotalMinutesForMonth(year, month) {
-  if (!userStats.learningSessions) return 0;
-  return userStats.learningSessions
-    .filter(s => {
-      const [y, m] = s.date.split('-').slice(0, 2);
-      return parseInt(y) === year && parseInt(m) === month;
-    })
-    .reduce((total, s) => total + (s.minutes || 0), 0);
-}
-
-function formatMinutes(totalMinutes) {
-  if (totalMinutes === 0) return '0m';
-  const hours = Math.floor(totalMinutes / 60);
-  const mins = totalMinutes % 60;
-  if (hours === 0) return `${mins}m`;
-  if (mins === 0) return `${hours}h`;
-  return `${hours}h ${mins}m`;
-}
-
-function getMonthStats(year, month) {
-  const lastDay = new Date(year, month, 0).getDate();
-  let daysLearned = 0;
-  let daysMissed = 0;
-
-  for (let day = 1; day <= lastDay; day++) {
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const minutes = getTotalMinutesForDate(dateStr);
-    if (minutes > 0) {
-  daysLearned++;
-} else {
-  const d = new Date(dateStr);
-  if (d < new Date()) {  
-    daysMissed++;
-  }
-}
-  }
-
-  return { daysLearned, daysMissed };
-}
-
-let calendarMode = 'month';
-let calendarDate = new Date();
-
-function renderLearningProgressCalendar() {
-  const container = $('learning-calendar');
-  if (!container) return;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const year = calendarDate.getFullYear();
-  const month = calendarDate.getMonth() + 1;
-
-  const stats = getMonthStats(year, month);
-  const totalMinutes = getTotalMinutesForMonth(year, month);
-  const totalDays = new Date(year, month, 0).getDate();
-  const avgMinutesPerLearningDay = stats.daysLearned > 0 ? Math.round(totalMinutes / stats.daysLearned) : 0;
-
-  const summaryHtml = `
-    <div class="calendar-summary">
-      <div class="summary-item">
-        <div class="summary-label">Days learned</div>
-        <div class="summary-value">${stats.daysLearned}</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-label">Days missed</div>
-        <div class="summary-value">${stats.daysMissed}</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-label">Total time</div>
-        <div class="summary-value">${formatMinutes(totalMinutes)}</div>
-      </div>
-      <div class="summary-item">
-        <div class="summary-label">Avg per day</div>
-        <div class="summary-value">${formatMinutes(avgMinutesPerLearningDay)}</div>
-      </div>
-    </div>
-  `;
-
-  const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
-  const controlsHtml = `
-    <div class="calendar-controls">
-      <button class="btn-calendar-nav" id="btn-cal-prev">← Prev</button>
-      <div class="calendar-month-display">${monthName}</div>
-      <button class="btn-calendar-nav" id="btn-cal-next">Next →</button>
-    </div>
-    <div class="calendar-mode-toggle">
-      <button class="btn-cal-mode ${calendarMode === 'month' ? 'active' : ''}" data-mode="month">📅 Month</button>
-      <button class="btn-cal-mode ${calendarMode === 'week' ? 'active' : ''}" data-mode="week">📊 Week</button>
-    </div>
-  `;
-
-  let calendarGridHtml = '';
-  if (calendarMode === 'month') {
-    calendarGridHtml = renderMonthGrid(year, month);
-  } else {
-    calendarGridHtml = renderWeekView(year, month);
-  }
-
-  container.innerHTML = summaryHtml + controlsHtml + calendarGridHtml;
-
-  $('btn-cal-prev')?.addEventListener('click', () => {
-    calendarDate.setMonth(calendarDate.getMonth() - 1);
-    renderLearningProgressCalendar();
-  });
-
-  $('btn-cal-next')?.addEventListener('click', () => {
-    calendarDate.setMonth(calendarDate.getMonth() + 1);
-    renderLearningProgressCalendar();
-  });
-
-  document.querySelectorAll('.btn-cal-mode').forEach(btn => {
-    btn.addEventListener('click', () => {
-      calendarMode = btn.dataset.mode;
-      renderLearningProgressCalendar();
-    });
-  });
-
-  document.querySelectorAll('.calendar-day').forEach(el => {
-    el.addEventListener('click', () => {
-      const dateStr = el.dataset.date;
-      showDateDetailsModal(dateStr);
-    });
+js
   });
 }
-
-function renderMonthGrid(year, month) {
-  const firstDay = new Date(year, month - 1, 1).getDay();
-  const lastDay = new Date(year, month, 0).getDate();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  let html = '<div class="calendar-grid">';
-  
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  dayNames.forEach(name => {
-    html += `<div class="calendar-day-header">${name}</div>`;
-  });
-
-  for (let i = 0; i < firstDay; i++) {
-    html += '<div class="calendar-day empty"></div>';
-  }
-
-  for (let day = 1; day <= lastDay; day++) {
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const dateObj = new Date(dateStr);
-    const minutes = getTotalMinutesForDate(dateStr);
-    const isFuture = dateObj > today;
-    const isToday = toLocalDateStr(today) === dateStr;
-    const hasActivity = minutes > 0;
-
-    const classes = [
-      'calendar-day',
-      isFuture ? 'future' : '',
-      isToday ? 'today' : '',
-      hasActivity ? 'active' : 'inactive'
-    ].filter(Boolean).join(' ');
-
-    const timeText = minutes > 0 ? formatMinutes(minutes) : (isFuture || isToday ? '' : 'Missed');
-    const progressPct = Math.min(minutes / 60 * 100, 100);
-
-    html += `
-      <div class="calendar-day ${classes}" data-date="${dateStr}" title="${dateStr}">
-        <div class="day-number">${day}</div>
-        <div class="day-time">${timeText}</div>
-        <div class="day-progress-bar">
-          <div class="day-progress-fill" style="width: ${progressPct}%"></div>
-        </div>
-      </div>
-    `;
-  }
-
-  html += '</div>';
-  return html;
 }
+delete the last } so it ends exactly like this:
 
-function renderWeekView(year, month) {
-  const today = new Date();
-  const weeks = [];
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDay = new Date(year, month, 0);
-
-  let currentDate = new Date(firstDay);
-  currentDate.setDate(currentDate.getDate() - currentDate.getDay());
-
-  while (currentDate < lastDay) {
-    const weekStart = new Date(currentDate);
-    const weekEnd = new Date(currentDate);
-    weekEnd.setDate(weekEnd.getDate() + 6);
-
-    weeks.push({
-      start: weekStart,
-      end: weekEnd
-    });
-
-    currentDate.setDate(currentDate.getDate() + 7);
-  }
-
-  let html = '<div class="calendar-weeks">';
-
-  weeks.forEach(week => {
-    const dayBreakdown = [];
-    let weekTotal = 0;
-
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(week.start);
-      d.setDate(d.getDate() + i);
-      const dateStr = toLocalDateStr(d);
-      const minutes = getTotalMinutesForDate(dateStr);
-      dayBreakdown.push({
-        day: d.toLocaleString('default', { weekday: 'short' }).substring(0, 3),
-        minutes,
-        dateStr
-      });
-      weekTotal += minutes;
-    }
-
-    html += `
-      <div class="week-card">
-        <div class="week-header">
-          <span class="week-range">${dayBreakdown[0].day} - ${dayBreakdown[6].day}</span>
-          <span class="week-total">${formatMinutes(weekTotal)}</span>
-        </div>
-        <div class="week-bars">
-          ${dayBreakdown.map((d, i) => `
-            <div class="week-bar-item">
-              <div class="week-bar-day">${d.day}</div>
-              <div class="week-bar" style="height: ${Math.min(d.minutes / 60 * 100, 100)}%;" 
-                   title="${d.dateStr}: ${formatMinutes(d.minutes)}"></div>
-              <div class="week-bar-time">${formatMinutes(d.minutes)}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  });
-
-  html += '</div>';
-  return html;
-}
-
-function showDateDetailsModal(dateStr) {
-  const sessions = getSessionsForDate(dateStr);
-  const totalMinutes = getTotalMinutesForDate(dateStr);
-
-  let html = `
-    <div class="modal-overlay" id="modal-overlay">
-      <div class="modal-content">
-        <div class="modal-header">
-          <div class="modal-title">${dateStr}</div>
-          <button class="modal-close" id="btn-close-modal">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="modal-summary">
-            <div class="modal-stat">
-              <span class="modal-label">Total time</span>
-              <span class="modal-value">${formatMinutes(totalMinutes)}</span>
-            </div>
-            <div class="modal-stat">
-              <span class="modal-label">Sessions</span>
-              <span class="modal-value">${sessions.length}</span>
-            </div>
-          </div>
-  `;
-
-  if (sessions.length === 0) {
-    html += '<div class="no-sessions">No learning recorded for this date.</div>';
-  } else {
-    html += '<div class="sessions-list">';
-    sessions.forEach(s => {
-      html += `
-        <div class="session-item">
-          <div class="session-course">${escapeHtml(s.courseTitle)}</div>
-          <div class="session-module">${escapeHtml(s.moduleTitle)}</div>
-          <div class="session-time-xp">
-            <span>⏱️ ${formatMinutes(s.minutes)}</span>
-            <span>✨ +${s.xpEarned} XP</span>
-          </div>
-        </div>
-      `;
-    });
-    html += '</div>';
-  }
-
-  html += `
-        </div>
-      </div>
-    </div>
-  `;
-
-  const modal = document.createElement('div');
-  modal.innerHTML = html;
-  document.body.appendChild(modal);
-
-  const overlay = $('modal-overlay');
-  $('btn-close-modal').addEventListener('click', () => {
-    modal.remove();
-  });
-
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) {
-      modal.remove();
-    }
+js
   });
 }
+Also remove any literal corruption text such as:
 
-function initLearningCalendar() {
-  calendarDate = new Date();
-  calendarMode = 'month';
-  renderLearningProgressCalendar();
-}
+js
+... renderDashboard();
+or:
 
-function monitorAndSkipAds() {
-  setInterval(() => {
-    try {
-      const skipBtn = document.querySelector('.ytp-ad-skip-button') || 
-                      document.querySelector('[aria-label*="Skip"]');
-      if (skipBtn && skipBtn.offsetParent !== null) skipBtn.click();
-      
-      const closeBtn = document.querySelector('.ytp-ad-overlay-close-button');
-      if (closeBtn && closeBtn.offsetParent !== null) closeBtn.click();
-    } catch (e) {}
-  }, 250);
-}
-   
-function showPublicVideoWarningModal(onContinue) {
-  const html = `
-    <div class="modal-overlay" id="public-video-modal-overlay">
-      <div class="modal-content">
-        <div class="modal-header">
-          <div class="modal-title">⚠️ Video must be public</div>
+js
+... const dropdown = document.createElement('div');
+Those three dots are not valid JavaScript.
 
-          <button
-            type="button"
-            class="modal-close"
-            id="btn-close-public-modal"
-          >
-            ✕
-          </button>
-        </div>
+Verify the file
+From the folder containing app.js, run:
 
-        <div class="modal-body">
-          <p style="margin-bottom:12px;">
-            LearnLock can only read videos that are set to
-            <strong>Public</strong> on YouTube.
-            Private and unlisted videos will fail to load,
-            even with a valid link.
-          </p>
+bash
+node --check app.js
+A correct file produces no output.
 
-          <p style="margin-bottom:16px;">
-            To check: open the video on YouTube, click below the player,
-            and confirm it says <strong>Public</strong> —
-            not Private or Unlisted.
-          </p>
+If you still see an error, print the final 20 lines:
 
-          <button
-            type="button"
-            class="btn-primary"
-            id="btn-continue-public-modal"
-          >
-            Got it, continue
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
+bash
+tail -n 20 app.js
+On Windows PowerShell, use:
 
-  const modal = document.createElement('div');
-  modal.innerHTML = html;
-  document.body.appendChild(modal);
+powershell
+Get-Content .\app.js -Tail 20
+Important browser fix
+After replacing the file:
 
-  const overlay = document.getElementById(
-    'public-video-modal-overlay'
-  );
+Save app.js.
 
-  const closeButton = document.getElementById(
-    'btn-close-public-modal'
-  );
+Confirm your HTML points to the correct file:
 
-  const continueButton = document.getElementById(
-    'btn-continue-public-modal'
-  );
+xml
+<script src="app.js"></script>
+Do a hard refresh:
 
-  const close = () => {
-    modal.remove();
-  };
+Chrome/Edge: Ctrl + Shift + R
 
-  closeButton.addEventListener('click', close);
+Or open DevTools, hold the reload button, and select Empty cache and hard reload.
 
-  overlay.addEventListener('click', (event) => {
-    if (event.target === overlay) {
-      close();
-    }
-  });
+Check the browser error again.
 
-  continueButton.addEventListener('click', () => {
-    close();
+The error may continue if the browser is loading a cached copy or if there are two script tags loading different versions of app.js. Search your HTML for app.js and make sure it appears only once.
 
-    if (typeof onContinue === 'function') {
-      onContinue();
-    }
-  });
-}
+
+
