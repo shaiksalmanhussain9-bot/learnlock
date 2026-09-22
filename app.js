@@ -2910,4 +2910,3 @@ function showPublicVideoWarningModal(onContinue) {
     }
   });
 }
-}
