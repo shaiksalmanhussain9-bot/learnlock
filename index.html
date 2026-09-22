@@ -154,27 +154,58 @@
       <button class="back-link" data-nav="dashboard">← Back</button>
     </div>
 
-    <div class="section-title" style="margin-bottom:18px;">New course</div>
+    <!-- AUTO-GENERATOR SECTION (shown first) -->
+    <div id="auto-generator-section">
+      <div class="section-title" style="margin-bottom:18px;">⚡ Auto-create modules from YouTube</div>
+      
+      <p class="muted-note" style="margin-bottom:14px;">
+        Paste a YouTube video link. LearnLock will automatically detect chapters or break it into 15-minute modules.
+      </p>
 
-    <div class="field">
-      <label for="course-name">Course name</label>
-      <input type="text" id="course-name" placeholder="e.g. Cybersecurity Full Course" />
+      <div class="field">
+        <label for="auto-youtube-url">YouTube video link</label>
+        <input 
+          type="text" 
+          id="auto-youtube-url" 
+          placeholder="https://www.youtube.com/watch?v=..." 
+        />
+      </div>
+
+      <button class="btn-primary" id="btn-auto-generate" style="margin-bottom:24px;">
+        🎬 Analyze & auto-create modules
+      </button>
+
+      <hr style="border:none; border-top:1px solid var(--line); margin:24px 0;">
+
+      <p class="muted-note">
+        👉 Or <button style="background:none; border:none; color:#4FD1B5; cursor:pointer; padding:0; font-size:14px;" onclick="$('auto-generator-section').style.display='none'; $('manual-builder-section').style.display='block';">manually add modules</button>
+      </p>
     </div>
 
-    <div class="field">
-      <label for="course-source">Course link (optional — YouTube, Coursera, Udemy, anything)</label>
-      <input type="text" id="course-source" placeholder="https://..." />
+    <!-- MANUAL BUILDER SECTION (shown after auto-generate or manual choice) -->
+    <div id="manual-builder-section" style="display:none;">
+      <div class="section-title" style="margin-bottom:18px;">New course</div>
+
+      <div class="field">
+        <label for="course-name">Course name</label>
+        <input type="text" id="course-name" placeholder="e.g. Cybersecurity Full Course" />
+      </div>
+
+      <div class="field">
+        <label for="course-source">Course link (optional)</label>
+        <input type="text" id="course-source" placeholder="https://..." />
+      </div>
+
+      <div class="section-head" style="margin-top:26px;">
+        <div class="section-title" style="font-size:16px;">Modules</div>
+        <span class="muted-note">1 module = 1 day</span>
+      </div>
+
+      <div id="module-rows"></div>
+      <button class="btn-add-module" id="btn-add-module">+ Add module</button>
+
+      <button class="btn-primary" id="btn-create-plan">Create learning plan</button>
     </div>
-
-    <div class="section-head" style="margin-top:26px;">
-      <div class="section-title" style="font-size:16px;">Modules</div>
-      <span class="muted-note">1 module = 1 day</span>
-    </div>
-
-    <div id="module-rows"></div>
-    <button class="btn-add-module" id="btn-add-module">+ Add module</button>
-
-    <button class="btn-primary" id="btn-create-plan">Create learning plan</button>
   </div>
 </div>
 
