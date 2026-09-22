@@ -2881,4 +2881,4 @@ function showPublicVideoWarningModal(onContinue) {
     close();
     if (onContinue) onContinue();
   });
-}
+
