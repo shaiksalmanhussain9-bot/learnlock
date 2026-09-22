@@ -823,7 +823,9 @@ async function deleteSharedCourse(sharedId) {
 document.addEventListener('click', function (event) {
   closeCourseMenus();
 
-  const backButton = event.target.closest('.back-link[data-nav="path"]');
+  const backButton = event.target.closest(
+    '.back-link[data-nav="path"]'
+  );
 
   if (!backButton) {
     return;
@@ -836,17 +838,16 @@ document.addEventListener('click', function (event) {
   }
 
   const moduleView = document.getElementById('view-module');
+  const pathView = document.getElementById('view-path');
 
   if (moduleView) {
     moduleView.classList.add('hidden');
+    moduleView.classList.remove('active');
   }
 
-  const planView =
-    document.getElementById('view-plan') ||
-    document.getElementById('view-path');
-
-  if (planView) {
-    planView.classList.remove('hidden');
+  if (pathView) {
+    pathView.classList.remove('hidden');
+    pathView.classList.add('active');
   }
 });
 
