@@ -1204,6 +1204,15 @@ $('btn-create-plan').addEventListener('click', async () => {
 
   if (!name) { toast('Give your course a name first.'); return; }
 
+  if (source && extractYouTubeId(source)) {
+    showPublicVideoWarningModal(() => finishCreatePlan(name, source, rows));
+    return;
+  }
+
+  await finishCreatePlan(name, source, rows);
+});
+
+async function finishCreatePlan(name, source, rows) {
   const modules = rows.map(row => {
     const m = {
       id: uid(),
@@ -1273,7 +1282,7 @@ $('btn-create-plan').addEventListener('click', async () => {
   await loadCourses();
   toast('Learning plan created — Day 1 is ready.');
   openCoursePath(docRef.id);
-});
+}
 
 function getCourse(courseId) {
   return coursesCache.find(c => c.id === courseId);
