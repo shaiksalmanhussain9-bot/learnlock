@@ -1070,7 +1070,10 @@ async function autoGenerateModules() {
     toast('Paste a YouTube URL first.');
     return;
   }
+  showPublicVideoWarningModal(() => runAutoGenerate(youtubeUrl));
+}
 
+async function runAutoGenerate(youtubeUrl) {
   const videoId = extractVideoIdFromUrl(youtubeUrl);
   if (!videoId) {
     toast('Invalid YouTube URL. Paste a link like https://www.youtube.com/watch?v=...');
