@@ -2850,18 +2850,37 @@ function showPublicVideoWarningModal(onContinue) {
       <div class="modal-content">
         <div class="modal-header">
           <div class="modal-title">⚠️ Video must be public</div>
-          <button class="modal-close" id="btn-close-public-modal">✕</button>
+
+          <button
+            type="button"
+            class="modal-close"
+            id="btn-close-public-modal"
+          >
+            ✕
+          </button>
         </div>
+
         <div class="modal-body">
           <p style="margin-bottom:12px;">
-            LearnLock can only read videos that are set to <strong>Public</strong> on YouTube.
-            Private and unlisted videos will fail to load, even with a valid link.
+            LearnLock can only read videos that are set to
+            <strong>Public</strong> on YouTube.
+            Private and unlisted videos will fail to load,
+            even with a valid link.
           </p>
+
           <p style="margin-bottom:16px;">
-            To check: open the video on YouTube, click below the player, and confirm
-            it says <strong>Public</strong> — not Private or Unlisted.
+            To check: open the video on YouTube, click below the player,
+            and confirm it says <strong>Public</strong> —
+            not Private or Unlisted.
           </p>
-          <button class="btn-primary" id="btn-continue-public-modal">Got it, continue</button>
+
+          <button
+            type="button"
+            class="btn-primary"
+            id="btn-continue-public-modal"
+          >
+            Got it, continue
+          </button>
         </div>
       </div>
     </div>
@@ -2871,14 +2890,35 @@ function showPublicVideoWarningModal(onContinue) {
   modal.innerHTML = html;
   document.body.appendChild(modal);
 
-  const overlay = $('public-video-modal-overlay');
-  const close = () => modal.remove();
+  const overlay = document.getElementById(
+    'public-video-modal-overlay'
+  );
 
-  $('btn-close-public-modal').addEventListener('click', close);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  const closeButton = document.getElementById(
+    'btn-close-public-modal'
+  );
 
-  $('btn-continue-public-modal').addEventListener('click', () => {
-    close();
-    if (onContinue) onContinue();
+  const continueButton = document.getElementById(
+    'btn-continue-public-modal'
+  );
+
+  const close = () => {
+    modal.remove();
+  };
+
+  closeButton.addEventListener('click', close);
+
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) {
+      close();
+    }
   });
 
+  continueButton.addEventListener('click', () => {
+    close();
+
+    if (typeof onContinue === 'function') {
+      onContinue();
+    }
+  });
+}
