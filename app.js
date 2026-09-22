@@ -1889,7 +1889,7 @@ function createYouTubePlayer(videoId, startSeconds) {
 
   container.innerHTML = '';
 
-  function createYouTubePlayer(videoId, startSeconds = 0) {
+ function createYouTubePlayer(videoId, startSeconds = 0) {
   if (!videoId) {
     toast('YouTube video ID is missing.');
     return;
