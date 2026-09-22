@@ -1170,6 +1170,86 @@ function addSubModuleRow(container, name = '', start = '00:00:00', end = '00:00:
   container.appendChild(row);
 }
 
+function timeToSeconds(value) {
+  if (typeof value === 'number') return Math.floor(value);
+
+  const parts = String(value || '00:00:00')
+    .trim()
+    .split(':')
+    .map(Number);
+
+  if (parts.some(Number.isNaN)) return NaN;
+
+  if (parts.length === 3) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+
+  if (parts.length === 2) {
+    return parts[0] * 60 + parts[1];
+  }
+
+  return parts[0];
+}
+
+function secondsToTime(totalSeconds) {
+  totalSeconds = Math.max(0, Math.floor(totalSeconds));
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return [
+    String(hours).padStart(2, '0'),
+    String(minutes).padStart(2, '0'),
+    String(seconds).padStart(2, '0')
+  ].join(':');
+}
+
+function fillGeneratedModuleTimes(chapters, videoDurationSeconds) {
+  const moduleRows = $('module-rows');
+
+  moduleRows.innerHTML = '';
+
+  const validChapters = chapters
+    .map(chapter => ({
+      name: String(chapter.name || chapter.title || '').trim(),
+      startSeconds: timeToSeconds(
+        chapter.startTime ?? chapter.start ?? chapter.timestamp
+      )
+    }))
+    .filter(chapter =>
+      chapter.name &&
+      Number.isFinite(chapter.startSeconds)
+    )
+    .sort((a, b) => a.startSeconds - b.startSeconds);
+
+  if (!validChapters.length) {
+    toast('No valid modules with timestamps were generated.');
+    return;
+  }
+
+  for (let i = 0; i < validChapters.length; i++) {
+    const current = validChapters[i];
+    const next = validChapters[i + 1];
+
+    const startSeconds = current.startSeconds;
+    const endSeconds = next
+      ? next.startSeconds
+      : videoDurationSeconds;
+
+    if (!Number.isFinite(endSeconds) || endSeconds <= startSeconds) {
+      continue;
+    }
+
+    addModuleRow(
+      current.name,
+      '',
+      secondsToTime(startSeconds),
+      secondsToTime(endSeconds)
+    );
+  }
+}
+
 function addModuleRow(name = '', duration = '', startTime = '00:00:00', endTime = '00:00:00') {
   const row = document.createElement('div');
   row.className = 'module-row';
