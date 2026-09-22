@@ -820,7 +820,35 @@ async function deleteSharedCourse(sharedId) {
   }
 }
 
-document.addEventListener('click', () => closeCourseMenus());
+document.addEventListener('click', function (event) {
+  closeCourseMenus();
+
+  const backButton = event.target.closest('.back-link[data-nav="path"]');
+
+  if (!backButton) {
+    return;
+  }
+
+  event.preventDefault();
+
+  if (typeof pauseTimer === 'function') {
+    pauseTimer();
+  }
+
+  const moduleView = document.getElementById('view-module');
+
+  if (moduleView) {
+    moduleView.classList.add('hidden');
+  }
+
+  const planView =
+    document.getElementById('view-plan') ||
+    document.getElementById('view-path');
+
+  if (planView) {
+    planView.classList.remove('hidden');
+  }
+});
 
 async function respondToCourseInvite(sharedId, accept) {
   if (accept) {
