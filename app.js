@@ -2844,6 +2844,7 @@ function monitorAndSkipAds() {
     } catch (e) {}
   }, 250);
 }
+   
 function showPublicVideoWarningModal(onContinue) {
   const html = `
     <div class="modal-overlay" id="public-video-modal-overlay">
@@ -2922,3 +2923,4 @@ function showPublicVideoWarningModal(onContinue) {
     }
   });
 }
+
