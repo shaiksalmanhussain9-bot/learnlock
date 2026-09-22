@@ -977,6 +977,157 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
+// YouTube API for Auto-Module Generator
+const YOUTUBE_API_KEY = 'AIzaSyAoaYH1sBAnDxQ9QHJ3vW8Wma6GpGoGyag';
+
+async function fetchYouTubeVideoInfo(videoId) {
+  try {
+    const url = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${YOUTUBE_API_KEY}&part=contentDetails,snippet`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch video info');
+    const data = await response.json();
+    if (!data.items || data.items.length === 0) throw new Error('Video not found');
+    return data.items[0];
+  } catch (err) {
+    console.error('YouTube API error:', err);
+    toast('Could not fetch video info. Make sure the YouTube link is public.');
+    return null;
+  }
+}
+
+function extractVideoIdFromUrl(url) {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
+    /youtube\.com\/embed\/([^&\n?#]+)/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+function parseDuration(isoDuration) {
+  const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
+  const matches = isoDuration.match(regex);
+  const hours = parseInt(matches[1] || 0);
+  const minutes = parseInt(matches[2] || 0);
+  const seconds = parseInt(matches[3] || 0);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+function extractChaptersFromDescription(description) {
+  if (!description) return [];
+  const lines = description.split('\n');
+  const chapters = [];
+  const timeRegex = /^(\d{1,2}):(\d{2}):?(\d{2})?\s*-?\s*(.+)/;
+  
+  for (const line of lines) {
+    const match = line.trim().match(timeRegex);
+    if (match) {
+      const hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      const secs = parseInt(match[3] || 0);
+      const title = match[4].trim();
+      chapters.push({
+        seconds: hours * 3600 + minutes * 60 + secs,
+        title
+      });
+    }
+  }
+  return chapters;
+}
+
+function generateTimeSegments(totalSeconds, segmentMinutes = 15) {
+  const segments = [];
+  const segmentSecs = segmentMinutes * 60;
+  let currentTime = 0;
+  
+  while (currentTime < totalSeconds) {
+    const startTime = currentTime;
+    const endTime = Math.min(currentTime + segmentSecs, totalSeconds);
+    segments.push({
+      seconds: startTime,
+      title: `Module ${segments.length + 1}`,
+      endSeconds: endTime
+    });
+    currentTime = endTime;
+  }
+  
+  return segments;
+}
+
+function secondsToTimeString(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+async function autoGenerateModules() {
+  const youtubeUrl = $('auto-youtube-url').value.trim();
+  if (!youtubeUrl) {
+    toast('Paste a YouTube URL first.');
+    return;
+  }
+
+  const videoId = extractVideoIdFromUrl(youtubeUrl);
+  if (!videoId) {
+    toast('Invalid YouTube URL. Paste a link like https://www.youtube.com/watch?v=...');
+    return;
+  }
+
+  $('btn-auto-generate').disabled = true;
+  $('btn-auto-generate').textContent = '🔄 Analyzing video...';
+
+  const videoInfo = await fetchYouTubeVideoInfo(videoId);
+  if (!videoInfo) {
+    $('btn-auto-generate').disabled = false;
+    $('btn-auto-generate').textContent = '🎬 Analyze & auto-create modules';
+    return;
+  }
+
+  const totalSeconds = parseDuration(videoInfo.contentDetails.duration);
+  const videoTitle = videoInfo.snippet.title;
+  const description = videoInfo.snippet.description || '';
+
+    // Try to extract chapters from description
+  let chapters = extractChaptersFromDescription(description);
+  
+  // If no chapters found, generate 15-min segments
+  if (chapters.length === 0) {
+    chapters = generateTimeSegments(totalSeconds, 15);
+  } else {
+    // Add end time to each chapter
+    for (let i = 0; i < chapters.length; i++) {
+      chapters[i].endSeconds = i + 1 < chapters.length ? chapters[i + 1].seconds : totalSeconds;
+    }
+  }
+
+  // Set course name
+  $('course-name').value = videoTitle;
+  $('course-source').value = youtubeUrl;
+
+  // Clear existing modules
+  $('module-rows').innerHTML = '';
+
+  // Add module rows
+  chapters.forEach(chapter => {
+    const startTime = secondsToTimeString(chapter.seconds);
+    const endTime = secondsToTimeString(chapter.endSeconds);
+    addModuleRow(chapter.title, '', startTime, endTime);
+  });
+
+  toast(`✅ Generated ${chapters.length} modules. Review and click "Create learning plan".`);
+
+  $('btn-auto-generate').disabled = false;
+  $('btn-auto-generate').textContent = '🎬 Analyze & auto-create modules';
+  $('auto-youtube-url').value = '';
+  
+  $('auto-generator-section').style.display = 'none';
+  $('manual-builder-section').style.display = 'block';
+}
+
 $('btn-new-course').addEventListener('click', () => {
   if (activeCourseCount() >= MAX_ACTIVE_COURSES) {
     toast(`You've hit the ${MAX_ACTIVE_COURSES}-course limit. Finish or remove one before adding another — it keeps you focused.`);
@@ -985,19 +1136,13 @@ $('btn-new-course').addEventListener('click', () => {
   $('course-name').value = '';
   $('course-source').value = '';
   $('module-rows').innerHTML = '';
-  addModuleRow();
-  addModuleRow();
+  $('auto-youtube-url').value = '';
+  $('auto-generator-section').style.display = 'block';
+  $('manual-builder-section').style.display = 'none';
   showView('builder');
 });
 
-document.querySelectorAll('[data-nav]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    showView(btn.dataset.nav);
-    if (btn.dataset.nav === 'dashboard') renderDashboard();
-    if (btn.dataset.nav === 'path') renderPath();
-  });
-});
-
+$('btn-auto-generate').addEventListener('click', autoGenerateModules);
 function addSubModuleRow(container, name = '', start = '00:00:00', end = '00:00:00') {
   const row = document.createElement('div');
   row.className = 'submodule-row';
