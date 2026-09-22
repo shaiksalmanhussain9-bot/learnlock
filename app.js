@@ -1033,17 +1033,28 @@ function escapeHtml(str) {
 const YOUTUBE_API_KEY = 'AIzaSyAoaYH1sBAnDxQ9QHJ3vW8Wma6GpGoGyag';
 
 async function fetchYouTubeVideoInfo(videoId) {
+  // A hard timeout so a slow/blocked request (ad-blocker, flaky network,
+  // etc.) can never leave the "Analyzing video..." button stuck forever.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
   try {
     const url = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${YOUTUBE_API_KEY}&part=contentDetails,snippet`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch video info');
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error(`Failed to fetch video info (HTTP ${response.status})`);
     const data = await response.json();
     if (!data.items || data.items.length === 0) throw new Error('Video not found');
     return data.items[0];
   } catch (err) {
     console.error('YouTube API error:', err);
-    toast('Could not fetch video info. Make sure the YouTube link is public.');
+    if (err.name === 'AbortError') {
+      toast('Timed out reaching YouTube. Check your connection and try again.');
+    } else {
+      toast('Could not fetch video info. Make sure the YouTube link is public.');
+    }
     return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -1133,52 +1144,63 @@ async function runAutoGenerate(youtubeUrl) {
   $('btn-auto-generate').disabled = true;
   $('btn-auto-generate').textContent = '🔄 Analyzing video...';
 
-  const videoInfo = await fetchYouTubeVideoInfo(videoId);
-  if (!videoInfo) {
-    $('btn-auto-generate').disabled = false;
-    $('btn-auto-generate').textContent = '🎬 Analyze & auto-create modules';
-    return;
-  }
+  try {
+    const videoInfo = await fetchYouTubeVideoInfo(videoId);
+    if (!videoInfo) {
+      // fetchYouTubeVideoInfo already showed a toast explaining why.
+      return;
+    }
 
-  const totalSeconds = parseDuration(videoInfo.contentDetails.duration);
-  const videoTitle = videoInfo.snippet.title;
-  const description = videoInfo.snippet.description || '';
+    const totalSeconds = parseDuration(videoInfo.contentDetails?.duration || 'PT0S');
+    const videoTitle = videoInfo.snippet?.title || 'Untitled video';
+    const description = videoInfo.snippet?.description || '';
 
     // Try to extract chapters from description
-  let chapters = extractChaptersFromDescription(description);
-  
-  // If no chapters found, generate 15-min segments
-  if (chapters.length === 0) {
-    chapters = generateTimeSegments(totalSeconds, 15);
-  } else {
-    // Add end time to each chapter
-    for (let i = 0; i < chapters.length; i++) {
-      chapters[i].endSeconds = i + 1 < chapters.length ? chapters[i + 1].seconds : totalSeconds;
+    let chapters = extractChaptersFromDescription(description);
+
+    // If no chapters found, generate 15-min segments
+    if (chapters.length === 0) {
+      chapters = generateTimeSegments(totalSeconds, 15);
+    } else {
+      // Add end time to each chapter
+      for (let i = 0; i < chapters.length; i++) {
+        chapters[i].endSeconds = i + 1 < chapters.length ? chapters[i + 1].seconds : totalSeconds;
+      }
     }
+
+    if (chapters.length === 0) {
+      toast("Couldn't figure out this video's length, so no modules could be generated. Try adding modules manually below.");
+      return;
+    }
+
+    // Set course name
+    $('course-name').value = videoTitle;
+    $('course-source').value = youtubeUrl;
+
+    // Clear existing modules
+    $('module-rows').innerHTML = '';
+
+    // Add module rows
+    chapters.forEach(chapter => {
+      const startTime = secondsToTimeString(chapter.seconds);
+      const endTime = secondsToTimeString(chapter.endSeconds);
+      addModuleRow(chapter.title, '', startTime, endTime);
+    });
+
+    toast(`✅ Generated ${chapters.length} modules. Review and click "Create learning plan".`);
+
+    $('auto-youtube-url').value = '';
+    $('auto-generator-section').style.display = 'none';
+    $('manual-builder-section').style.display = 'block';
+  } catch (err) {
+    // Catch-all: no matter what breaks above, the button must not be left
+    // stuck on "Analyzing video..." forever, and the person should see why.
+    console.error('Auto-generate error:', err);
+    toast('Something went wrong analyzing that video. Try again, or add modules manually below.');
+  } finally {
+    $('btn-auto-generate').disabled = false;
+    $('btn-auto-generate').textContent = '🎬 Analyze & auto-create modules';
   }
-
-  // Set course name
-  $('course-name').value = videoTitle;
-  $('course-source').value = youtubeUrl;
-
-  // Clear existing modules
-  $('module-rows').innerHTML = '';
-
-  // Add module rows
-  chapters.forEach(chapter => {
-    const startTime = secondsToTimeString(chapter.seconds);
-    const endTime = secondsToTimeString(chapter.endSeconds);
-    addModuleRow(chapter.title, '', startTime, endTime);
-  });
-
-  toast(`✅ Generated ${chapters.length} modules. Review and click "Create learning plan".`);
-
-  $('btn-auto-generate').disabled = false;
-  $('btn-auto-generate').textContent = '🎬 Analyze & auto-create modules';
-  $('auto-youtube-url').value = '';
-  
-  $('auto-generator-section').style.display = 'none';
-  $('manual-builder-section').style.display = 'block';
 }
 
 $('btn-new-course').addEventListener('click', () => {
