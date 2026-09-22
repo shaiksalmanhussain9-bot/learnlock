@@ -1171,14 +1171,18 @@ function addSubModuleRow(container, name = '', start = '00:00:00', end = '00:00:
 }
 
 function timeToSeconds(value) {
-  if (typeof value === 'number') return Math.floor(value);
+  if (typeof value === 'number') {
+    return Math.floor(value);
+  }
 
   const parts = String(value || '00:00:00')
     .trim()
     .split(':')
     .map(Number);
 
-  if (parts.some(Number.isNaN)) return NaN;
+  if (parts.some(Number.isNaN)) {
+    return NaN;
+  }
 
   if (parts.length === 3) {
     return parts[0] * 3600 + parts[1] * 60 + parts[2];
@@ -1192,7 +1196,7 @@ function timeToSeconds(value) {
 }
 
 function secondsToTime(totalSeconds) {
-  totalSeconds = Math.max(0, Math.floor(totalSeconds));
+  totalSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
 
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
