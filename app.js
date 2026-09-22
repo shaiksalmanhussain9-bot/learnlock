@@ -1070,15 +1070,18 @@ async function autoGenerateModules() {
     toast('Paste a YouTube URL first.');
     return;
   }
-  showPublicVideoWarningModal(() => runAutoGenerate(youtubeUrl));
-}
 
-async function runAutoGenerate(youtubeUrl) {
   const videoId = extractVideoIdFromUrl(youtubeUrl);
   if (!videoId) {
     toast('Invalid YouTube URL. Paste a link like https://www.youtube.com/watch?v=...');
     return;
   }
+
+  showPublicVideoWarningModal(() => runAutoGenerate(youtubeUrl));
+}
+
+async function runAutoGenerate(youtubeUrl) {
+  const videoId = extractVideoIdFromUrl(youtubeUrl);
 
   $('btn-auto-generate').disabled = true;
   $('btn-auto-generate').textContent = '🔄 Analyzing video...';
