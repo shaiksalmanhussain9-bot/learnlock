@@ -2609,3 +2609,41 @@ function monitorAndSkipAds() {
     } catch (e) {}
   }, 250);
 }
+function showPublicVideoWarningModal(onContinue) {
+  const html = `
+    <div class="modal-overlay" id="public-video-modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">⚠️ Video must be public</div>
+          <button class="modal-close" id="btn-close-public-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom:12px;">
+            LearnLock can only read videos that are set to <strong>Public</strong> on YouTube.
+            Private and unlisted videos will fail to load, even with a valid link.
+          </p>
+          <p style="margin-bottom:16px;">
+            To check: open the video on YouTube, click below the player, and confirm
+            it says <strong>Public</strong> — not Private or Unlisted.
+          </p>
+          <button class="btn-primary" id="btn-continue-public-modal">Got it, continue</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const modal = document.createElement('div');
+  modal.innerHTML = html;
+  document.body.appendChild(modal);
+
+  const overlay = $('public-video-modal-overlay');
+  const close = () => modal.remove();
+
+  $('btn-close-public-modal').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  $('btn-continue-public-modal').addEventListener('click', () => {
+    close();
+    if (onContinue) onContinue();
+  });
+}
