@@ -1889,24 +1889,78 @@ function createYouTubePlayer(videoId, startSeconds) {
 
   container.innerHTML = '';
 
-  youtubePlayer = new YT.Player('youtube-player', {
-    videoId: videoId,
-    playerVars: {
-      autoplay: 0,
-      controls: 1,       // show native controls (settings gear, captions, fullscreen)
-      disablekb: 1,       // block keyboard seek shortcuts (arrow keys, etc.)
-      fs: 1,              // enable the fullscreen button
-      cc_load_policy: 0,  // don't force captions on, but the CC toggle still shows if captions exist
-      iv_load_policy: 3,  // hide video annotations/cards
-      rel: 0,              // related videos limited to the same channel only
-      start: startSeconds,
-      modestbranding: 1
-    },
-    events: {
-      onStateChange: onYouTubeStateChange,
-      onReady: onPlayerReady
+  function createYouTubePlayer(videoId, startSeconds = 0) {
+  if (!videoId) {
+    toast('YouTube video ID is missing.');
+    return;
+  }
+
+  const createPlayer = () => {
+    if (
+      typeof window.YT === 'undefined' ||
+      typeof window.YT.Player === 'undefined'
+    ) {
+      toast('YouTube player is still loading. Please try again.');
+      return;
     }
-  });
+
+    const playerContainer = document.getElementById('youtube-player');
+
+    if (!playerContainer) {
+      toast('YouTube player area was not found.');
+      return;
+    }
+
+    if (
+      youtubePlayer &&
+      typeof youtubePlayer.destroy === 'function'
+    ) {
+      youtubePlayer.destroy();
+      youtubePlayer = null;
+    }
+
+    playerContainer.innerHTML = '';
+
+    youtubePlayer = new YT.Player('youtube-player', {
+      videoId: videoId,
+      playerVars: {
+        autoplay: 0,
+        controls: 1,
+        disablekb: 1,
+        fs: 1,
+        cc_load_policy: 0,
+        iv_load_policy: 3,
+        rel: 0,
+        start: Math.max(0, Math.floor(startSeconds)),
+        modestbranding: 1,
+        playsinline: 1
+      },
+      events: {
+        onReady: onPlayerReady,
+        onStateChange: onYouTubeStateChange,
+        onError: function (event) {
+          console.error('YouTube player error code:', event.data);
+
+          if (event.data === 101 || event.data === 150) {
+            toast('This video does not allow embedded playback.');
+          } else if (event.data === 100) {
+            toast('This video is unavailable or private.');
+          } else {
+            toast('YouTube could not play this video.');
+          }
+        }
+      }
+    });
+  };
+
+  if (
+    typeof window.YT !== 'undefined' &&
+    typeof window.YT.Player !== 'undefined'
+  ) {
+    createPlayer();
+  } else {
+    window.onYouTubeIframeAPIReady = createPlayer;
+  }
 }
 
 function openModule(moduleId) {
