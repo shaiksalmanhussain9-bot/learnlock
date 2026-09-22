@@ -1612,14 +1612,16 @@ window.onYouTubeIframeAPIReady = function () {
 function extractYouTubeId(url) {
   if (!url) return null;
 
-  const trimmed = url.trim();
+  const trimmed = String(url).trim();
 
   try {
-    const u = new URL(trimmed);
-    const host = u.hostname.replace('www.', '');
+    const parsedUrl = new URL(trimmed);
+    const host = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
 
     if (host === 'youtu.be') {
-      return u.pathname.slice(1).split('/')[0] || null;
+      return parsedUrl.pathname
+        .split('/')
+        .filter(Boolean)[0] || null;
     }
 
     if (
@@ -1627,19 +1629,24 @@ function extractYouTubeId(url) {
       host === 'm.youtube.com' ||
       host === 'music.youtube.com'
     ) {
-      if (u.pathname === '/watch') {
-        return u.searchParams.get('v');
+      if (parsedUrl.pathname === '/watch') {
+        return parsedUrl.searchParams.get('v');
       }
 
-      const match = u.pathname.match(
-        /^\/(embed|shorts|live)\/([^/?]+)/
-      );
+      const pathParts = parsedUrl.pathname
+        .split('/')
+        .filter(Boolean);
 
-      if (match) {
-        return match[2];
+      if (
+        pathParts[0] === 'embed' ||
+        pathParts[0] === 'shorts' ||
+        pathParts[0] === 'live'
+      ) {
+        return pathParts[1] || null;
       }
     }
-  } catch (e) {
+  } catch (error) {
+    // Allow a plain 11-character YouTube video ID
     if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
       return trimmed;
     }
@@ -1648,16 +1655,31 @@ function extractYouTubeId(url) {
   return null;
 }
 
+
 function isAdPlaying() {
-  if (!youtubePlayer || typeof youtubePlayer.getVideoData !== 'function') return false;
+  if (
+    !youtubePlayer ||
+    typeof youtubePlayer.getVideoData !== 'function'
+  ) {
+    return false;
+  }
+
   try {
     const data = youtubePlayer.getVideoData();
-    if (!data || !data.video_id) return false;
-    return currentCourseVideoId && data.video_id !== currentCourseVideoId;
-  } catch (e) {
+
+    if (!data || !data.video_id) {
+      return false;
+    }
+
+    return Boolean(
+      currentCourseVideoId &&
+      data.video_id !== currentCourseVideoId
+    );
+  } catch (error) {
     return false;
   }
 }
+
 
 function checkYouTubeSkip() {
   if (
@@ -1669,7 +1691,6 @@ function checkYouTubeSkip() {
   }
 
   const currentTime = youtubePlayer.getCurrentTime();
-
   const allowedTime = youtubeMaxWatchedSeconds + 1;
 
   if (currentTime > allowedTime) {
@@ -1684,6 +1705,7 @@ function checkYouTubeSkip() {
 
   return false;
 }
+
 
 function startForwardSeekProtection() {
   stopForwardSeekProtection();
@@ -1700,6 +1722,7 @@ function startForwardSeekProtection() {
     checkYouTubeSkip();
   }, 100);
 }
+
 
 function stopForwardSeekProtection() {
   if (youtubeSeekProtectionInterval) {
