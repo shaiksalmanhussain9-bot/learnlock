@@ -1223,8 +1223,15 @@ function fillGeneratedModuleTimes(chapters, videoDurationSeconds) {
     )
     .sort((a, b) => a.startSeconds - b.startSeconds);
 
-  if (!validChapters.length) {
+  if (validChapters.length === 0) {
     toast('No valid modules with timestamps were generated.');
+    return;
+  }
+
+  const totalDuration = Number(videoDurationSeconds);
+
+  if (!Number.isFinite(totalDuration) || totalDuration <= 0) {
+    toast('Video duration is missing or invalid.');
     return;
   }
 
@@ -1235,9 +1242,9 @@ function fillGeneratedModuleTimes(chapters, videoDurationSeconds) {
     const startSeconds = current.startSeconds;
     const endSeconds = next
       ? next.startSeconds
-      : videoDurationSeconds;
+      : totalDuration;
 
-    if (!Number.isFinite(endSeconds) || endSeconds <= startSeconds) {
+    if (startSeconds < 0 || endSeconds <= startSeconds) {
       continue;
     }
 
