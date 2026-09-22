@@ -2923,4 +2923,4 @@ function showPublicVideoWarningModal(onContinue) {
     }
   });
 }
-
+}
