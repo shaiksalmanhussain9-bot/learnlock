@@ -1048,15 +1048,10 @@ async function fetchYouTubeVideoInfo(videoId) {
 }
 
 function extractVideoIdFromUrl(url) {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
-    /youtube\.com\/embed\/([^&\n?#]+)/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return null;
+  // Delegates to extractYouTubeId, which handles watch?v=, youtu.be/,
+  // /embed/, /shorts/, and /live/ links (this used to have its own
+  // narrower regex that didn't know about /live/ URLs).
+  return extractYouTubeId(url);
 }
 
 function parseDuration(isoDuration) {
