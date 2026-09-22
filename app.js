@@ -1875,26 +1875,13 @@ function onPlayerReady(event) {
   setTimeout(() => clearInterval(skipAdsInterval), 20000);
 }
 
-function createYouTubePlayer(videoId, startSeconds) {
-  currentCourseVideoId = videoId;
-  const container = $('youtube-player');
-
-  if (!videoId) return;
-
-  if (!youtubeAPIReady || typeof YT === 'undefined' || !YT.Player) {
-    pendingYouTubeRequest = { videoId, startSeconds };
-    container.innerHTML = '<div class="video-missing">Loading player…</div>';
-    return;
-  }
-
-  container.innerHTML = '';
-
- function createYouTubePlayer(videoId, startSeconds = 0) {
+function createYouTubePlayer(videoId, startSeconds = 0) {
   if (!videoId) {
     toast('YouTube video ID is missing.');
     return;
   }
 
+  currentCourseVideoId = videoId;
   const createPlayer = () => {
     if (
       typeof window.YT === 'undefined' ||
