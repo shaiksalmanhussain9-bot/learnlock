@@ -1066,12 +1066,17 @@ function extractVideoIdFromUrl(url) {
 }
 
 function parseDuration(isoDuration) {
-  const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
+  if (!isoDuration) return 0;
+  // Anchored, and includes an optional days component, since YouTube
+  // returns formats like "P0D" (no PT... part at all) for live streams.
+  const regex = /^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/;
   const matches = isoDuration.match(regex);
-  const hours = parseInt(matches[1] || 0);
-  const minutes = parseInt(matches[2] || 0);
-  const seconds = parseInt(matches[3] || 0);
-  return hours * 3600 + minutes * 60 + seconds;
+  if (!matches) return 0;
+  const days = parseInt(matches[1] || 0);
+  const hours = parseInt(matches[2] || 0);
+  const minutes = parseInt(matches[3] || 0);
+  const seconds = parseInt(matches[4] || 0);
+  return days * 86400 + hours * 3600 + minutes * 60 + seconds;
 }
 
 function extractChaptersFromDescription(description) {
@@ -1154,6 +1159,16 @@ async function runAutoGenerate(youtubeUrl) {
     const totalSeconds = parseDuration(videoInfo.contentDetails?.duration || 'PT0S');
     const videoTitle = videoInfo.snippet?.title || 'Untitled video';
     const description = videoInfo.snippet?.description || '';
+    const liveStatus = videoInfo.snippet?.liveBroadcastContent; // 'live' | 'upcoming' | 'none'
+
+    if (liveStatus === 'live' || liveStatus === 'upcoming') {
+      toast(
+        liveStatus === 'live'
+          ? "This is a live stream in progress, so it doesn't have a fixed length yet. Wait until it ends, or add modules manually below."
+          : "This video hasn't started streaming yet. Come back once it's live or finished, or add modules manually below."
+      );
+      return;
+    }
 
     // Try to extract chapters from description
     let chapters = extractChaptersFromDescription(description);
