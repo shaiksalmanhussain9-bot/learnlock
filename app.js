@@ -823,9 +823,7 @@ async function deleteSharedCourse(sharedId) {
 document.addEventListener('click', function (event) {
   closeCourseMenus();
 
-  const backButton = event.target.closest(
-    '.back-link[data-nav="path"]'
-  );
+  const backButton = event.target.closest('.back-link');
 
   if (!backButton) {
     return;
@@ -833,21 +831,46 @@ document.addEventListener('click', function (event) {
 
   event.preventDefault();
 
-  if (typeof pauseTimer === 'function') {
-    pauseTimer();
+  const destination = backButton.dataset.nav;
+
+  // Module screen: Back to plan
+  if (destination === 'path') {
+    if (typeof pauseTimer === 'function') {
+      pauseTimer();
+    }
+
+    const moduleView = document.getElementById('view-module');
+    const pathView = document.getElementById('view-path');
+
+    if (moduleView) {
+      moduleView.classList.add('hidden');
+      moduleView.classList.remove('active');
+    }
+
+    if (pathView) {
+      pathView.classList.remove('hidden');
+      pathView.classList.add('active');
+    }
+
+    return;
   }
 
-  const moduleView = document.getElementById('view-module');
-  const pathView = document.getElementById('view-path');
+  // Path screen: Back to dashboard
+  if (destination === 'dashboard') {
+    const pathView = document.getElementById('view-path');
+    const dashboardView = document.getElementById('view-dashboard');
 
-  if (moduleView) {
-    moduleView.classList.add('hidden');
-    moduleView.classList.remove('active');
-  }
+    if (pathView) {
+      pathView.classList.add('hidden');
+      pathView.classList.remove('active');
+    }
 
-  if (pathView) {
-    pathView.classList.remove('hidden');
-    pathView.classList.add('active');
+    if (dashboardView) {
+      dashboardView.classList.remove('hidden');
+      dashboardView.classList.add('active');
+    }
+
+    return;
   }
 });
 
