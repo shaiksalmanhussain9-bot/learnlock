@@ -1170,7 +1170,7 @@ function addSubModuleRow(container, name = '', start = '00:00:00', end = '00:00:
   container.appendChild(row);
 }
 
-function addModuleRow(name = '', duration = '') {
+function addModuleRow(name = '', duration = '', startTime = '00:00:00', endTime = '00:00:00') {
   const row = document.createElement('div');
   row.className = 'module-row';
   row.innerHTML = `
@@ -1180,12 +1180,12 @@ function addModuleRow(name = '', duration = '') {
       </div>
       <div class="field time">
     <label>Start</label>
-    <input type="text" placeholder="00:00:00" class="mod-start" value="00:00:00" />
+    <input type="text" placeholder="00:00:00" class="mod-start" value="${escapeHtml(startTime)}" />
   </div>
 
   <div class="field time">
     <label>End</label>
-    <input type="text" placeholder="00:00:00" class="mod-end" value="00:00:00" />
+    <input type="text" placeholder="00:00:00" class="mod-end" value="${escapeHtml(endTime)}" />
   </div>
       <button type="button" class="remove-module" title="Remove" aria-label="Remove">✕</button>
     </div>
