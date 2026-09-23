@@ -838,41 +838,24 @@ document.addEventListener('click', function (event) {
 
   // Module screen: Back to plan
   if (destination === 'path') {
-    if (typeof pauseTimer === 'function') {
-      pauseTimer();
-    }
+    // Stop the timer and seek-guard running in the background — they'd
+    // otherwise keep ticking/polling even with the module view hidden.
+    clearInterval(timerInterval);
+    timerRunning = false;
+    stopForwardSeekProtection();
 
-    const moduleView = document.getElementById('view-module');
-    const pathView = document.getElementById('view-path');
-
-    if (moduleView) {
-      moduleView.classList.add('hidden');
-      moduleView.classList.remove('active');
-    }
-
-    if (pathView) {
-      pathView.classList.remove('hidden');
-      pathView.classList.add('active');
-    }
-
+    // Re-render before showing: if this module was opened directly from
+    // the dashboard's "Continue learning" card, the path view's content
+    // was never generated, so without this it shows up completely blank.
+    renderPath();
+    showView('path');
     return;
   }
 
   // Path screen: Back to dashboard
   if (destination === 'dashboard') {
-    const pathView = document.getElementById('view-path');
-    const dashboardView = document.getElementById('view-dashboard');
-
-    if (pathView) {
-      pathView.classList.add('hidden');
-      pathView.classList.remove('active');
-    }
-
-    if (dashboardView) {
-      dashboardView.classList.remove('hidden');
-      dashboardView.classList.add('active');
-    }
-
+    renderDashboard();
+    showView('dashboard');
     return;
   }
 });
