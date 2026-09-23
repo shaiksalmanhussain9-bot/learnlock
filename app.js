@@ -1595,7 +1595,7 @@ function renderPath() {
         <div class="node-title">${escapeHtml(mod.name)}</div>
         <div class="node-duration">${durationText}</div>
         ${subListHtml}
-        <div class="node-status">${statusText}</div>
+        <div class="node-status" style="${mod.status === 'completed' ? 'color:#34D399;font-weight:600;' : ''}">${statusText}</div>
         ${mod.status === 'available' ? `<button class="btn-start" data-mod="${mod.id}">${isResumable ? '▶ Continue module' : 'Start module'}</button>` : ''}
         ${rewatchModuleBtn}
       </div>
