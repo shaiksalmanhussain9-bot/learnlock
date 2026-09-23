@@ -75,6 +75,9 @@ let timerInterval = null;
 let timerRunning = false;
 let youtubePlayer = null;
 let youtubeMaxWatchedSeconds = 0;
+let youtubeLastPolledSeconds = 0;
+let isSanctionedSeek = false;
+let timerWasRunningBeforeBuffer = false;
 let youtubeSeekProtectionInterval = null;
 let youtubeAPIReady = false;
 let pendingYouTubeRequest = null;
@@ -1713,6 +1716,15 @@ function isAdPlaying() {
 }
 
 
+function sanctionSeek(durationMs = 600) {
+  // Call this immediately before any seekTo() our own code performs
+  // (the rewind button, mainly) so the seek guard below doesn't mistake
+  // it for a native scrubber drag and revert it.
+  isSanctionedSeek = true;
+  clearTimeout(sanctionSeek._timer);
+  sanctionSeek._timer = setTimeout(() => { isSanctionedSeek = false; }, durationMs);
+}
+
 function checkYouTubeSkip() {
   if (
     reviewMode ||
@@ -1723,13 +1735,45 @@ function checkYouTubeSkip() {
   }
 
   const currentTime = youtubePlayer.getCurrentTime();
-  const allowedTime = youtubeMaxWatchedSeconds + 1;
 
-  if (currentTime > allowedTime) {
+  if (isSanctionedSeek) {
+    // We just moved the playhead ourselves (rewind button) — accept it.
+    youtubeLastPolledSeconds = currentTime;
+    youtubeMaxWatchedSeconds = Math.max(youtubeMaxWatchedSeconds, currentTime);
+    return false;
+  }
+
+  const course = getActiveCourse();
+  const unit = course ? getActiveUnit(course) : null;
+  const unitStartSeconds = unit ? timeToSeconds(unit.startTime) : 0;
+
+  // Never let native dragging skip ahead of what's actually been watched.
+  if (currentTime > youtubeMaxWatchedSeconds + 1) {
     youtubePlayer.seekTo(youtubeMaxWatchedSeconds, true);
+    youtubeLastPolledSeconds = youtubeMaxWatchedSeconds;
     return true;
   }
 
+  // Never let native dragging go before this module/sub-module's start —
+  // this is what let people drag into an earlier, locked module.
+  if (currentTime < unitStartSeconds) {
+    const fallback = Math.max(unitStartSeconds, youtubeLastPolledSeconds);
+    youtubePlayer.seekTo(fallback, true);
+    youtubeLastPolledSeconds = fallback;
+    return true;
+  }
+
+  // Anything else that jumps more than ~2.5s between 100ms polls is a
+  // scrubber drag, not normal playback — revert it. Legitimate jumps
+  // (the rewind button, initial module positioning) are exempted above
+  // via isSanctionedSeek.
+  const delta = currentTime - youtubeLastPolledSeconds;
+  if (Math.abs(delta) > 2.5) {
+    youtubePlayer.seekTo(youtubeLastPolledSeconds, true);
+    return true;
+  }
+
+  youtubeLastPolledSeconds = currentTime;
   youtubeMaxWatchedSeconds = Math.max(
     youtubeMaxWatchedSeconds,
     currentTime
@@ -1787,6 +1831,18 @@ function onYouTubeStateChange(event) {
     } catch (e) {}
   }
 
+  if (event.data === YT.PlayerState.BUFFERING) {
+    // Video is loading/seeking (including our own rewind) — the timer
+    // should wait, but shouldn't require a manual Resume click once
+    // playback picks back up. That's handled by timerWasRunningBeforeBuffer.
+    if (timerRunning) {
+      timerRunning = false;
+      clearInterval(timerInterval);
+      timerWasRunningBeforeBuffer = true;
+    }
+    return;
+  }
+
   if (event.data === YT.PlayerState.PLAYING) {
     hidePauseShield(); // playing — whether it's the course video or an ad, no cover needed
 
@@ -1802,6 +1858,16 @@ function onYouTubeStateChange(event) {
       return;
     }
 
+    if (timerWasRunningBeforeBuffer) {
+      // We were only paused because of buffering/seeking, not because
+      // the user chose to pause — pick the timer back up on our own.
+      timerWasRunningBeforeBuffer = false;
+      if (timerSecondsLeft > 0 && !timerRunning) {
+        startTimerInterval();
+      }
+      return;
+    }
+
     if (timerSecondsLeft > 0 && !timerRunning && $('btn-timer-start').dataset.playRequested === 'true') {
       startTimerInterval();
       $('btn-timer-start').dataset.playRequested = 'false';
@@ -1810,6 +1876,17 @@ function onYouTubeStateChange(event) {
 
   if (event.data === YT.PlayerState.PAUSED) {
     showPauseShield(); // paused — cover the video so YouTube's suggestion panel can't be seen/clicked
+
+    if (isSanctionedSeek) {
+      // This pause is a byproduct of our own seek (rewind button), not
+      // a deliberate user pause — don't force a manual Resume click.
+      if (timerRunning) {
+        timerRunning = false;
+        clearInterval(timerInterval);
+        timerWasRunningBeforeBuffer = true;
+      }
+      return;
+    }
 
     if (timerRunning) {
       timerRunning = false;
@@ -1882,6 +1959,7 @@ function onPlayerReady(event) {
   const player = event.target;
 
   startForwardSeekProtection();
+  setupRewindGesture();
 
   const skipAdsInterval = setInterval(() => {
     try {
@@ -1906,6 +1984,120 @@ function onPlayerReady(event) {
 
   setTimeout(() => clearInterval(skipAdsInterval), 20000);
 }
+
+// ---------- Double-click-to-rewind (left half of the video) ----------
+const REWIND_SECONDS = 10;
+const REWIND_DOUBLE_CLICK_MS = 300;
+let rewindClickCount = 0;
+let rewindClickTimer = null;
+
+function injectRewindOverlayStyles() {
+  if (document.getElementById('rewind-overlay-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'rewind-overlay-styles';
+  style.textContent = `
+    .rewind-overlay-zone {
+      position: absolute;
+      top: 0;
+      bottom: 44px;
+      left: 0;
+      width: 50%;
+      z-index: 4;
+      cursor: pointer;
+      background: transparent;
+    }
+    .rewind-flash {
+      position: absolute;
+      top: 50%;
+      left: 25%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 20px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 6;
+      white-space: nowrap;
+    }
+    .rewind-flash.show { opacity: 1; }
+  `;
+  document.head.appendChild(style);
+}
+
+function showRewindFlash(container) {
+  const flash = container.querySelector('.rewind-flash');
+  if (!flash) return;
+  flash.classList.add('show');
+  clearTimeout(showRewindFlash._t);
+  showRewindFlash._t = setTimeout(() => flash.classList.remove('show'), 500);
+}
+
+function rewindTenSeconds(container) {
+  if (!youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') return;
+
+  const course = getActiveCourse();
+  const unit = course ? getActiveUnit(course) : null;
+  const unitStartSeconds = unit ? timeToSeconds(unit.startTime) : 0;
+
+  const current = youtubePlayer.getCurrentTime();
+  const target = Math.max(unitStartSeconds, current - REWIND_SECONDS);
+
+  sanctionSeek();
+  youtubePlayer.seekTo(target, true);
+  youtubeLastPolledSeconds = target;
+  showRewindFlash(container);
+}
+
+function setupRewindGesture() {
+  injectRewindOverlayStyles();
+
+  const playerEl = document.getElementById('youtube-player');
+  if (!playerEl || !playerEl.parentElement) return;
+  const container = playerEl.parentElement;
+  if (getComputedStyle(container).position === 'static') {
+    container.style.position = 'relative';
+  }
+
+  container.querySelectorAll('.rewind-overlay-zone, .rewind-flash').forEach(el => el.remove());
+
+  const zone = document.createElement('div');
+  zone.className = 'rewind-overlay-zone';
+
+  const flash = document.createElement('div');
+  flash.className = 'rewind-flash';
+  flash.textContent = `⏪ ${REWIND_SECONDS}s`;
+
+  container.appendChild(zone);
+  container.appendChild(flash);
+
+  zone.addEventListener('click', () => {
+    rewindClickCount += 1;
+
+    if (rewindClickCount === 1) {
+      rewindClickTimer = setTimeout(() => {
+        // Single click — behave like clicking the video normally: toggle play/pause.
+        if (youtubePlayer && typeof youtubePlayer.getPlayerState === 'function') {
+          const state = youtubePlayer.getPlayerState();
+          if (state === YT.PlayerState.PLAYING) {
+            youtubePlayer.pauseVideo();
+          } else if (typeof youtubePlayer.playVideo === 'function') {
+            youtubePlayer.playVideo();
+          }
+        }
+        rewindClickCount = 0;
+      }, REWIND_DOUBLE_CLICK_MS);
+    } else {
+      clearTimeout(rewindClickTimer);
+      rewindClickCount = 0;
+      rewindTenSeconds(container);
+    }
+  });
+}
+// ---------- end double-click-to-rewind ----------
 
 function createYouTubePlayer(videoId, startSeconds = 0) {
   if (!videoId) {
@@ -2033,6 +2225,7 @@ if (!videoId) {
 startForwardSeekProtection();   
 
 youtubeMaxWatchedSeconds = videoStartSeconds;
+youtubeLastPolledSeconds = videoStartSeconds;
 
 timerSecondsLeft = timerTotalSeconds - resumeElapsed;
 timerRunning = false;
@@ -2093,6 +2286,7 @@ function openModuleForReview(moduleId, subModuleId) {
 
   timerTotalSeconds = unitEndSeconds - unitStartSeconds;
   youtubeMaxWatchedSeconds = unitEndSeconds;
+  youtubeLastPolledSeconds = unitStartSeconds;
   timerSecondsLeft = 0;
   timerRunning = false;
   clearInterval(timerInterval);
