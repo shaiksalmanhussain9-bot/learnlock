@@ -58,6 +58,70 @@ const ACHIEVEMENTS = [
 
 let pendingStreakToast = null;
 
+const QUIZ_PASSING_SCORE = 7;
+const QUIZ_TOTAL_QUESTIONS = 10;
+const QUIZ_MAX_DAILY_ATTEMPTS = 3;
+
+function getTodayKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function prepareQuizAttempts(module) {
+  if (!module.quiz) {
+    module.quiz = {
+      questions: [],
+      score: null,
+      passed: false,
+      attempts: 0,
+      attemptDate: null
+    };
+  }
+
+  async function generateModuleQuiz(moduleName, moduleText) {
+  try {
+    const response = await fetch(
+      'https://learnlock-quiz.shaiksalmanhussain9.workers.dev',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          moduleName,
+          moduleText
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Quiz generation failed.');
+    }
+
+    if (!Array.isArray(data.questions) || data.questions.length !== QUIZ_TOTAL_QUESTIONS) {
+      throw new Error('The AI did not return exactly 10 questions.');
+    }
+
+    return data.questions;
+
+  } catch (error) {
+    console.error('Quiz generation error:', error);
+    throw error;
+  }
+}
+
+  const today = getTodayKey();
+
+  if (module.quiz.attemptDate !== today) {
+    module.quiz.attempts = 0;
+    module.quiz.attemptDate = today;
+  }
+
+  return module.quiz;
+}
+
 let currentUser = null;
 let userStats = null;
 let coursesCache = [];
@@ -1379,11 +1443,19 @@ $('btn-create-plan').addEventListener('click', async () => {
 async function finishCreatePlan(name, source, rows) {
   const modules = rows.map(row => {
     const m = {
-      id: uid(),
-      name: row.querySelector('.mod-name').value.trim(),
-      startTime: row.querySelector('.mod-start').value.trim(),
-      endTime: row.querySelector('.mod-end').value.trim(),
-    };
+  id: uid(),
+  name: row.querySelector('.mod-name').value.trim(),
+  startTime: row.querySelector('.mod-start').value.trim(),
+  endTime: row.querySelector('.mod-end').value.trim(),
+
+  quiz: {
+    questions: [],
+    score: null,
+    passed: false,
+    attempts: 0,
+    attemptDate: null
+  }
+};
 
     const subRows = Array.from(row.querySelectorAll('.submodule-row'));
     const subModules = subRows.map(subRow => ({
@@ -2167,6 +2239,22 @@ function openModule(moduleId) {
   const currentSub = getCurrentSubModule(mod);
   activeSubModuleId = currentSub ? currentSub.id : null;
   const unit = currentSub || mod;
+
+   const quizData = prepareQuizAttempts(unit);
+
+   let quizContainer = $('learnlock-quiz-container');
+
+if (!quizContainer) {
+  quizContainer = document.createElement('div');
+  quizContainer.id = 'learnlock-quiz-container';
+  quizContainer.style.display = 'none';
+
+  const moduleView = $('view-module');
+
+  if (moduleView) {
+    moduleView.appendChild(quizContainer);
+  }
+}
 
   $('module-day-tag').textContent = `Day ${dayIndex + 1}${currentSub ? ` · ${currentSub.name}` : ''}`;
   $('module-title').textContent = currentSub ? `${mod.name} — ${currentSub.name}` : mod.name;
