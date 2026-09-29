@@ -267,8 +267,16 @@
         <button class="btn-timer-ghost" id="btn-timer-pause" style="display:none;">⏸ Pause</button>
       </div>
 
-      <button class="btn-complete" id="btn-complete-module" disabled>Complete module</button>
+           <button class="btn-complete" id="btn-complete-module" disabled>Complete module</button>
       <p class="extra-note">Reach 00:00:00 to unlock completion. Keep studying past it if you want — extra time still earns bonus points.</p>
+
+      <div id="quiz-container" class="quiz-card" style="display:none;">
+        <div class="section-title">📝 Module Quiz</div>
+        <p class="muted-note">Score 7/10 to complete this module.</p>
+        <div id="quiz-questions"></div>
+        <button class="btn-primary" id="btn-submit-quiz">Submit Quiz</button>
+        <div id="quiz-result"></div>
+      </div>
     </div>
   </div>
 </div>
