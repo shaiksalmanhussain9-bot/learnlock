@@ -1840,5 +1840,9 @@ Check the browser error again.
 
 The error may continue if the browser is loading a cached copy or if there are two script tags loading different versions of app.js. Search your HTML for app.js and make sure it appears only once.
 
-
+.quiz-card { margin-top: 20px; padding: 16px; border-radius: 14px; border: 1px solid rgba(128,128,128,.3); }
+.quiz-question { margin: 16px 0; }
+.quiz-option { display: flex; gap: 10px; padding: 10px 12px; margin: 6px 0; border: 1px solid rgba(128,128,128,.3); border-radius: 10px; cursor: pointer; }
+.quiz-pass { padding: 14px; border-radius: 10px; background: rgba(40,180,90,.15); margin-top: 14px; }
+.quiz-fail { padding: 14px; border-radius: 10px; background: rgba(220,60,60,.15); margin-top: 14px; }
 
