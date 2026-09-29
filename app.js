@@ -78,6 +78,17 @@ function prepareQuizAttempts(module) {
     };
   }
 
+  const today = getTodayKey();
+
+  if (module.quiz.attemptDate !== today) {
+    module.quiz.attempts = 0;
+    module.quiz.attemptDate = today;
+  }
+
+  return module.quiz;
+}
+
+
  async function generateModuleQuiz(moduleName, youtubeUrl, startTime, endTime) {
   try {
     const response = await fetch(
