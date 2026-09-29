@@ -2318,7 +2318,7 @@ updateTimerDisplay();
 $('btn-timer-start').style.display = 'inline-block';
 $('btn-timer-start').textContent = isResuming ? '▶ Continue' : '▶ Start learning';
 $('btn-timer-pause').style.display = 'none';
-$('btn-complete-module').style.display = 'block';
+$('btn-complete-module').style.display = 'none';
 $('btn-complete-module').textContent = 'Mark as completed';
 const extraNoteEl = document.querySelector('#view-module .extra-note');
 if (extraNoteEl) extraNoteEl.style.display = 'block';
