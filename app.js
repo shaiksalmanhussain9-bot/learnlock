@@ -78,7 +78,7 @@ function prepareQuizAttempts(module) {
     };
   }
 
-  async function generateModuleQuiz(moduleName, moduleText) {
+ async function generateModuleQuiz(moduleName, youtubeUrl, startTime, endTime) {
   try {
     const response = await fetch(
       'https://learnlock-quiz.shaiksalmanhussain9.workers.dev',
@@ -89,7 +89,9 @@ function prepareQuizAttempts(module) {
         },
         body: JSON.stringify({
           moduleName,
-          moduleText
+          youtubeUrl,
+          startTime,
+          endTime
         })
       }
     );
@@ -100,7 +102,10 @@ function prepareQuizAttempts(module) {
       throw new Error(data.error || 'Quiz generation failed.');
     }
 
-    if (!Array.isArray(data.questions) || data.questions.length !== QUIZ_TOTAL_QUESTIONS) {
+    if (
+      !Array.isArray(data.questions) ||
+      data.questions.length !== QUIZ_TOTAL_QUESTIONS
+    ) {
       throw new Error('The AI did not return exactly 10 questions.');
     }
 
