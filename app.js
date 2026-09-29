@@ -2434,16 +2434,20 @@ $('btn-timer-pause').addEventListener('click', () => {
 $('btn-complete-module').addEventListener('click', async () => {
   if (reviewMode) return;
 
+  const course = getActiveCourse();
+  const modules = course.modules;
+
   stopForwardSeekProtection();
   clearInterval(timerInterval);
 
   $('btn-complete-module').disabled = true;
   $('btn-complete-module').textContent = 'Saving…';
 
-  const course = getActiveCourse();
-  const modules = course.modules;
   const idx = modules.findIndex(m => m.id === activeModuleId);
   const mod = modules[idx];
+   const currentSub = getCurrentSubModule(mod);
+const unit = currentSub || mod;
+const quizData = prepareQuizAttempts(unit);
 
   if (activeSubModuleId) {
     const subIdx = mod.subModules.findIndex(s => s.id === activeSubModuleId);
