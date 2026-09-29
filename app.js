@@ -2432,7 +2432,6 @@ $('btn-complete-module').addEventListener('click', async () => {
   const idx = modules.findIndex(m => m.id === activeModuleId);
   const mod = modules[idx];
    const currentSub = getCurrentSubModule(mod);
-const unit = currentSub || mod;
 const quizData = prepareQuizAttempts(unit);
 
   if (activeSubModuleId) {
