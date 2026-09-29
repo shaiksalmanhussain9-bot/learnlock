@@ -128,16 +128,6 @@ function prepareQuizAttempts(module) {
   }
 }
 
-  const today = getTodayKey();
-
-  if (module.quiz.attemptDate !== today) {
-    module.quiz.attempts = 0;
-    module.quiz.attemptDate = today;
-  }
-
-  return module.quiz;
-}
-
 let currentUser = null;
 let userStats = null;
 let coursesCache = [];
