@@ -2248,12 +2248,7 @@ function openModule(moduleId) {
 
    const quizData = prepareQuizAttempts(unit);
 
-   if (!quizData.passed) {
-  toast('Please pass the AI quiz before completing this module.');
-  return;
-}
-
-     $('module-day-tag').textContent = `Day ${dayIndex + 1}${currentSub ? ` · ${currentSub.name}` : ''}`;
+        $('module-day-tag').textContent = `Day ${dayIndex + 1}${currentSub ? ` · ${currentSub.name}` : ''}`;
   $('module-title').textContent = currentSub ? `${mod.name} — ${currentSub.name}` : mod.name;
 
   const resumeState = loadResumeState();
