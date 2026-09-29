@@ -2494,25 +2494,6 @@ const quizData = prepareQuizAttempts(unit);
     userStats.activeDates.push(todayForCalendar);
   }
 
-const unit = activeSubModuleId 
-  ? (mod.subModules || []).find(s => s.id === activeSubModuleId) 
-  : mod;
-
-if (unit) {
-  const unitStartSeconds = timeToSeconds(unit.startTime);
-  const unitEndSeconds = timeToSeconds(unit.endTime);
-  const sessionMinutes = Math.round((unitEndSeconds - unitStartSeconds) / 60);
-  
-  recordLearningSession(
-    todayForCalendar,
-    activeCourseId,
-    course.name,
-    activeModuleId,
-    unit.name,
-    sessionMinutes
-  );
-}
-
   const newMilestones = checkStreakMilestones();
   if (courseJustCompleted && activeCourseType === 'personal') userStats.coursesCompleted += 1;
   const newBadges = checkNewAchievements();
