@@ -2235,7 +2235,7 @@ function createYouTubePlayer(videoId, startSeconds = 0) {
   }
 }
 
-function openModule(moduleId) {
+async function openModule(moduleId) {
   reviewMode = false;
   activeModuleId = moduleId;
   const course = getActiveCourse();
@@ -2247,6 +2247,19 @@ function openModule(moduleId) {
   const unit = currentSub || mod;
 
    const quizData = prepareQuizAttempts(unit);
+   if (!quizData.questions || quizData.questions.length !== QUIZ_TOTAL_QUESTIONS) {
+  try {
+    quizData.questions = await generateModuleQuiz(
+      unit.name,
+      course.source,
+      unit.startTime,
+      unit.endTime
+    );
+  } catch (error) {
+    console.error(error);
+    toast('Unable to generate the AI quiz. Please try again.');
+  }
+}
 
         $('module-day-tag').textContent = `Day ${dayIndex + 1}${currentSub ? ` · ${currentSub.name}` : ''}`;
   $('module-title').textContent = currentSub ? `${mod.name} — ${currentSub.name}` : mod.name;
