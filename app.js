@@ -2248,21 +2248,12 @@ function openModule(moduleId) {
 
    const quizData = prepareQuizAttempts(unit);
 
-   let quizContainer = $('learnlock-quiz-container');
-
-if (!quizContainer) {
-  quizContainer = document.createElement('div');
-  quizContainer.id = 'learnlock-quiz-container';
-  quizContainer.style.display = 'none';
-
-  const moduleView = $('view-module');
-
-  if (moduleView) {
-    moduleView.appendChild(quizContainer);
-  }
+   if (!quizData.passed) {
+  toast('Please pass the AI quiz before completing this module.');
+  return;
 }
 
-  $('module-day-tag').textContent = `Day ${dayIndex + 1}${currentSub ? ` · ${currentSub.name}` : ''}`;
+     $('module-day-tag').textContent = `Day ${dayIndex + 1}${currentSub ? ` · ${currentSub.name}` : ''}`;
   $('module-title').textContent = currentSub ? `${mod.name} — ${currentSub.name}` : mod.name;
 
   const resumeState = loadResumeState();
