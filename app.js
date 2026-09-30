@@ -62,6 +62,59 @@ const QUIZ_PASSING_SCORE = 7;
 const QUIZ_TOTAL_QUESTIONS = 10;
 const QUIZ_MAX_DAILY_ATTEMPTS = 3;
 
+let quizGenerationInProgress = new Set();
+
+async function ensureQuizReadyInBackground(unit, youtubeUrl) {
+  if (!unit || !youtubeUrl) return;
+
+  const quiz = prepareQuizAttempts(unit);
+
+  if (
+    Array.isArray(quiz.questions) &&
+    quiz.questions.length === QUIZ_TOTAL_QUESTIONS
+  ) {
+    updateQuizStatusOnModuleScreen('ready');
+    return;
+  }
+
+  const generationKey = `${activeCourseId}:${unit.id}`;
+
+  if (quizGenerationInProgress.has(generationKey)) {
+    return;
+  }
+
+  quizGenerationInProgress.add(generationKey);
+  updateQuizStatusOnModuleScreen('generating');
+
+  try {
+    const questions = await generateModuleQuiz(
+      unit.name,
+      youtubeUrl,
+      unit.startTime,
+      unit.endTime
+    );
+
+    quiz.questions = questions;
+    quiz.generatedAt = Date.now();
+    quiz.status = 'ready';
+
+    await saveQuizToCurrentCourse(unit);
+
+    updateQuizStatusOnModuleScreen('ready');
+    toast('✅ Quiz ready for this module.');
+  } catch (error) {
+    console.error('Background quiz generation failed:', error);
+
+    quiz.status = 'failed';
+    quiz.errorMessage = error.message || 'Unknown quiz error';
+
+    updateQuizStatusOnModuleScreen('failed');
+    toast('Quiz could not be created. You can try again later.');
+  } finally {
+    quizGenerationInProgress.delete(generationKey);
+  }
+}
+
 function getTodayKey() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -2236,17 +2289,37 @@ function createYouTubePlayer(videoId, startSeconds = 0) {
   }
 }
 
-async function openModule(moduleId) {
+function openModule(moduleId) {
   reviewMode = false;
   activeModuleId = moduleId;
+
   const course = getActiveCourse();
+
+  if (!course || !Array.isArray(course.modules)) {
+    toast('Course data is not ready. Please reload once.');
+    return;
+  }
+
   const mod = course.modules.find(m => m.id === moduleId);
+
+  if (!mod) {
+    toast('Module not found. Please refresh the course.');
+    return;
+  }
+
   const dayIndex = course.modules.findIndex(m => m.id === moduleId);
 
   const currentSub = getCurrentSubModule(mod);
   activeSubModuleId = currentSub ? currentSub.id : null;
+
   const unit = currentSub || mod;
 
+  // Open the module immediately.
+  renderModuleScreen(course, mod, unit, dayIndex, moduleId);
+
+  // Generate/load quiz in the background.
+  ensureQuizReadyInBackground(unit, course.source);
+}
    const quizData = prepareQuizAttempts(unit);
    if (!quizData.questions || quizData.questions.length !== QUIZ_TOTAL_QUESTIONS) {
   try {
@@ -2385,6 +2458,101 @@ function openModuleForReview(moduleId, subModuleId) {
   if (extraNoteEl) extraNoteEl.style.display = 'none';
 
   showView('module');
+}
+
+function renderModuleScreen(course, mod, unit, dayIndex, moduleId) {
+  $('module-day-tag').textContent =
+    `Day ${dayIndex + 1}${activeSubModuleId ? ` · ${unit.name}` : ''}`;
+
+  $('module-title').textContent =
+    activeSubModuleId
+      ? `${mod.name} — ${unit.name}`
+      : mod.name;
+
+  const resumeState = loadResumeState();
+
+  const isResuming =
+    resumeState &&
+    resumeState.courseId === activeCourseId &&
+    resumeState.courseType === activeCourseType &&
+    resumeState.moduleId === moduleId &&
+    resumeState.subModuleId === activeSubModuleId;
+
+  const unitStartSeconds = timeToSeconds(unit.startTime);
+  const unitEndSeconds = timeToSeconds(unit.endTime);
+
+  timerTotalSeconds = Math.max(0, unitEndSeconds - unitStartSeconds);
+
+  const resumeElapsed = isResuming
+    ? Math.min(resumeState.elapsedSeconds || 0, timerTotalSeconds)
+    : 0;
+
+  const videoStartSeconds = unitStartSeconds + resumeElapsed;
+
+  stopForwardSeekProtection();
+
+  if (youtubePlayer && typeof youtubePlayer.destroy === 'function') {
+    youtubePlayer.destroy();
+    youtubePlayer = null;
+  }
+
+  const videoId = extractYouTubeId(course.source);
+  const playerContainer = $('youtube-player');
+
+  if (!videoId) {
+    playerContainer.innerHTML = `
+      <div class="video-missing">
+        ⚠️ No playable YouTube video found.
+      </div>
+    `;
+  } else if (!youtubeAPIReady) {
+    playerContainer.innerHTML = `
+      <div class="video-missing">
+        Loading video player…
+      </div>
+    `;
+
+    pendingYouTubeRequest = {
+      videoId,
+      startSeconds: videoStartSeconds
+    };
+  } else {
+    createYouTubePlayer(videoId, videoStartSeconds);
+  }
+
+  youtubeMaxWatchedSeconds = videoStartSeconds;
+  youtubeLastPolledSeconds = videoStartSeconds;
+
+  timerSecondsLeft = Math.max(
+    0,
+    timerTotalSeconds - resumeElapsed
+  );
+
+  timerRunning = false;
+  clearInterval(timerInterval);
+
+  updateTimerDisplay();
+
+  $('btn-timer-start').style.display = 'inline-block';
+  $('btn-timer-start').textContent =
+    isResuming ? '▶ Continue' : '▶ Start learning';
+
+  $('btn-timer-pause').style.display = 'none';
+  $('btn-complete-module').style.display = 'block';
+  $('btn-complete-module').textContent = 'Finish module';
+  $('btn-complete-module').disabled = true;
+
+  const extraNoteEl =
+    document.querySelector('#view-module .extra-note');
+
+  if (extraNoteEl) {
+    extraNoteEl.style.display = 'block';
+  }
+
+  showView('module');
+
+  // Do not create an endless interval every time a module opens.
+  startAdMonitorOnce();
 }
 
 function updateTimerDisplay() {
