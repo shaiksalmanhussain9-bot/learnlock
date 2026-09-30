@@ -1781,68 +1781,44 @@ z-index: 5;
 pointer-events: auto;
 }
 .youtube-pause-shield.hidden { display: none; pointer-events: none; }
-app.js:2913 Uncaught SyntaxError: Unexpected token '}' (at app.js:2913:1)
-The error at app.js:2913 means your browser is still loading the old file or the file still has an extra closing brace at the end.
 
-Fix the end of app.js
-Open app.js and go to the final lines. If it ends like this:
-
-js
-  });
-}
-}
-delete the last } so it ends exactly like this:
-
-js
-  });
-}
-Also remove any literal corruption text such as:
-
-js
-... renderDashboard();
-or:
-
-js
-... const dropdown = document.createElement('div');
-Those three dots are not valid JavaScript.
-
-Verify the file
-From the folder containing app.js, run:
-
-bash
-node --check app.js
-A correct file produces no output.
-
-If you still see an error, print the final 20 lines:
-
-bash
-tail -n 20 app.js
-On Windows PowerShell, use:
-
-powershell
-Get-Content .\app.js -Tail 20
-Important browser fix
-After replacing the file:
-
-Save app.js.
-
-Confirm your HTML points to the correct file:
-
-xml
-<script src="app.js"></script>
-Do a hard refresh:
-
-Chrome/Edge: Ctrl + Shift + R
-
-Or open DevTools, hold the reload button, and select Empty cache and hard reload.
-
-Check the browser error again.
-
-The error may continue if the browser is loading a cached copy or if there are two script tags loading different versions of app.js. Search your HTML for app.js and make sure it appears only once.
-
+/* ---------- Quiz box ---------- */
 .quiz-card { margin-top: 20px; padding: 16px; border-radius: 14px; border: 1px solid rgba(128,128,128,.3); }
 .quiz-question { margin: 16px 0; }
 .quiz-option { display: flex; gap: 10px; padding: 10px 12px; margin: 6px 0; border: 1px solid rgba(128,128,128,.3); border-radius: 10px; cursor: pointer; }
 .quiz-pass { padding: 14px; border-radius: 10px; background: rgba(40,180,90,.15); margin-top: 14px; }
 .quiz-fail { padding: 14px; border-radius: 10px; background: rgba(220,60,60,.15); margin-top: 14px; }
 
+/* ---------- Quiz answer coloring (after submit) ---------- */
+.quiz-option.correct-answer { background: rgba(52,211,153,0.18); border-color: #34D399; }
+.quiz-option.wrong-selected { background: rgba(248,113,113,0.18); border-color: #F87171; }
+.quiz-option input:disabled { cursor: not-allowed; }
+
+/* ---------- Score celebration popup ---------- */
+.score-popup-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2000; animation: fadeIn 0.2s;
+}
+.score-popup-card {
+  background: var(--surface); border: 1px solid var(--gold-dim);
+  border-radius: 16px; padding: 32px 24px; max-width: 340px; width: 90%;
+  text-align: center; animation: slideUp 0.3s;
+}
+.score-popup-emoji { font-size: 56px; margin-bottom: 10px; }
+.score-popup-title { font-family: var(--serif); font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.score-popup-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 22px; }
+.score-popup-card .btn-primary { margin-top: 0; }
+.score-popup-card .btn-secondary { margin-top: 10px; }
+
+/* ---------- Share card (for social/WhatsApp) ---------- */
+.share-card-preview {
+  background: linear-gradient(135deg, var(--surface-raised), var(--surface));
+  border: 1px solid var(--gold-dim); border-radius: 14px;
+  padding: 24px; text-align: center; margin: 16px 0;
+}
+.share-card-brand { font-family: var(--serif); font-weight: 700; font-size: 18px; margin-bottom: 14px; }
+.share-card-brand .lock-mark { color: #4FD1B5; }
+.share-card-module { font-size: 14px; color: var(--text-muted); margin-bottom: 4px; }
+.share-card-score { font-family: var(--serif); font-size: 40px; font-weight: 700; margin: 6px 0; }
+.share-card-badge { font-size: 14px; color: #4FD1B5; font-weight: 600; }
