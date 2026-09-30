@@ -107,10 +107,11 @@ function prepareQuizAttempts(module) {
       }
     );
 
-    const data = await response.json();
+        const data = await response.json();
 
     if (!response.ok || !data.success) {
-      throw new Error(data.error || 'Quiz generation failed.');
+      console.error('Quiz Worker details:', data.details);
+      throw new Error((data.error || 'Quiz generation failed.') + (data.details ? ' — ' + data.details.slice(0, 300) : ''));
     }
 
     if (
