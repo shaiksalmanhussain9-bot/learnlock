@@ -2443,21 +2443,6 @@ function openModule(moduleId) {
   ensureQuizReadyInBackground(unit, course.source);
 }
   
- showPauseShield(); // module opens paused, so keep the shield up until Start/Continue is pressed
-
-updateTimerDisplay();
-$('btn-timer-start').style.display = 'inline-block';
-$('btn-timer-start').textContent = isResuming ? '▶ Continue' : '▶ Start learning';
-$('btn-timer-pause').style.display = 'none';
-$('btn-complete-module').style.display = 'none';
-$('btn-complete-module').textContent = 'Mark as completed';
-const extraNoteEl = document.querySelector('#view-module .extra-note');
-if (extraNoteEl) extraNoteEl.style.display = 'block';
-
-showView('module');
-monitorAndSkipAds();
-}
-
 function openModuleForReview(moduleId, subModuleId) {
   reviewMode = true;
   activeModuleId = moduleId;
