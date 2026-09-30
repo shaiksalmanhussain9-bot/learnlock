@@ -2442,11 +2442,12 @@ $('btn-complete-module').addEventListener('click', async () => {
   $('btn-complete-module').disabled = true;
   $('btn-complete-module').textContent = 'Saving…';
 
-  const idx = modules.findIndex(m => m.id === activeModuleId);
+   const idx = modules.findIndex(m => m.id === activeModuleId);
   const mod = modules[idx];
-   const currentSub = getCurrentSubModule(mod);
-const quizData = prepareQuizAttempts(unit);
-
+  const currentSub = getCurrentSubModule(mod);
+  const unit = currentSub || mod;
+  const quizData = prepareQuizAttempts(unit);
+   
   if (activeSubModuleId) {
     const subIdx = mod.subModules.findIndex(s => s.id === activeSubModuleId);
     mod.subModules[subIdx].status = 'completed';
