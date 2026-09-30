@@ -2443,53 +2443,7 @@ function openModule(moduleId) {
   ensureQuizReadyInBackground(unit, course.source);
 }
   
-  const isResuming = resumeState
-    && resumeState.courseId === activeCourseId
-    && resumeState.courseType === activeCourseType
-    && resumeState.moduleId === moduleId
-    && resumeState.subModuleId === activeSubModuleId;
-
-  const unitStartSeconds = timeToSeconds(unit.startTime);
-  timerTotalSeconds = timeToSeconds(unit.endTime) - unitStartSeconds;
-  const resumeElapsed = isResuming ? Math.min(resumeState.elapsedSeconds, timerTotalSeconds) : 0;
-  const videoStartSeconds = unitStartSeconds + resumeElapsed;
-
-stopForwardSeekProtection();
-
-if (youtubePlayer) {
-  youtubePlayer.destroy();
-  youtubePlayer = null;
-}
-
-const videoId = extractYouTubeId(course.source);
-const playerContainer = $('youtube-player');
-
-if (!videoId) {
-  playerContainer.innerHTML = '<div class="video-missing">⚠️ No playable video found. Paste a direct video link (open the video, copy the URL from the address bar) — not a playlist link.</div>';
-} else if (!youtubeAPIReady) {
-  playerContainer.innerHTML = '<div class="video-missing">Loading player…</div>';
-  pendingYouTubeRequest = {
-    videoId,
-    startSeconds: videoStartSeconds
-  };
-} else {
-  createYouTubePlayer(videoId, videoStartSeconds);
-}
-
-startForwardSeekProtection();   
-
-youtubeMaxWatchedSeconds = videoStartSeconds;
-youtubeLastPolledSeconds = videoStartSeconds;
-
-timerSecondsLeft = timerTotalSeconds - resumeElapsed;
-timerRunning = false;
-clearInterval(timerInterval);
-
-if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
-  youtubePlayer.pauseVideo();
-}
-
-showPauseShield(); // module opens paused, so keep the shield up until Start/Continue is pressed
+ showPauseShield(); // module opens paused, so keep the shield up until Start/Continue is pressed
 
 updateTimerDisplay();
 $('btn-timer-start').style.display = 'inline-block';
