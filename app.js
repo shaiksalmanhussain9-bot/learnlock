@@ -2442,25 +2442,7 @@ function openModule(moduleId) {
   // Generate/load quiz in the background.
   ensureQuizReadyInBackground(unit, course.source);
 }
-   const quizData = prepareQuizAttempts(unit);
-   if (!quizData.questions || quizData.questions.length !== QUIZ_TOTAL_QUESTIONS) {
-  try {
-    quizData.questions = await generateModuleQuiz(
-      unit.name,
-      course.source,
-      unit.startTime,
-      unit.endTime
-    );
-  } catch (error) {
-    console.error(error);
-    toast('Unable to generate the AI quiz. Please try again.');
-  }
-}
-
-        $('module-day-tag').textContent = `Day ${dayIndex + 1}${currentSub ? ` · ${currentSub.name}` : ''}`;
-  $('module-title').textContent = currentSub ? `${mod.name} — ${currentSub.name}` : mod.name;
-
-  const resumeState = loadResumeState();
+  
   const isResuming = resumeState
     && resumeState.courseId === activeCourseId
     && resumeState.courseType === activeCourseType
