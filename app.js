@@ -3564,3 +3564,39 @@ $('btn-submit-quiz').addEventListener('click', () => {
     result.innerHTML = `<div class="quiz-fail">📚 Score: ${score}/${total}. You need ${QUIZ_PASSING_SCORE}. ${left} attempt${left === 1 ? '' : 's'} left today.</div>`;
   }
 });
+
+// ← ADD THIS AT THE VERY END OF YOUR FILE
+
+let adMonitorInterval = null;
+
+function startAdMonitorOnce() {
+  if (adMonitorInterval) return;
+
+  adMonitorInterval = setInterval(() => {
+    try {
+      const skipButton =
+        document.querySelector('.ytp-ad-skip-button') ||
+        document.querySelector('[aria-label*="Skip"]');
+
+      if (skipButton && skipButton.offsetParent !== null) {
+        skipButton.click();
+      }
+
+      const closeButton =
+        document.querySelector('.ytp-ad-overlay-close-button');
+
+      if (closeButton && closeButton.offsetParent !== null) {
+        closeButton.click();
+      }
+    } catch (error) {
+      // Ignore temporary YouTube DOM changes.
+    }
+  }, 500);
+}
+
+function stopAdMonitor() {
+  if (adMonitorInterval) {
+    clearInterval(adMonitorInterval);
+    adMonitorInterval = null;
+  }
+}
