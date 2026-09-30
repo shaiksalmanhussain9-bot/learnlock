@@ -115,6 +115,52 @@ async function ensureQuizReadyInBackground(unit, youtubeUrl) {
   }
 }
 
+function updateQuizStatusOnModuleScreen(status) {
+  const label = $('timer-label');
+
+  if (!label || reviewMode) return;
+
+  if (status === 'generating') {
+    label.textContent =
+      'Video ready — quiz is being prepared in the background';
+  }
+
+  if (status === 'ready' && timerSecondsLeft > 0) {
+    label.textContent = 'Time remaining';
+  }
+
+  if (status === 'failed') {
+    label.textContent =
+      'Video ready — quiz unavailable for now';
+  }
+}
+
+async function saveQuizToCurrentCourse(unit) {
+  const course = getActiveCourse();
+
+  if (!course || !unit) return;
+
+  const modules = course.modules;
+
+  if (activeCourseType === 'shared') {
+    await db.collection('sharedCourses')
+      .doc(activeCourseId)
+      .update({
+        [`progress.${currentUser.uid}`]: modules
+      });
+
+    return;
+  }
+
+  await coursesRef()
+    .doc(activeCourseId)
+    .update({
+      modules
+    });
+
+  await loadCourses();
+}
+
 function getTodayKey() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -141,8 +187,18 @@ function prepareQuizAttempts(module) {
   return module.quiz;
 }
 
+async function generateModuleQuiz(
+  moduleName,
+  youtubeUrl,
+  startTime,
+  endTime
+) {
+  const controller = new AbortController();
 
- async function generateModuleQuiz(moduleName, youtubeUrl, startTime, endTime) {
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, 45000);
+
   try {
     const response = await fetch(
       'https://learnlock-quiz.shaiksalmanhussain9.workers.dev',
@@ -156,29 +212,56 @@ function prepareQuizAttempts(module) {
           youtubeUrl,
           startTime,
           endTime
-        })
+        }),
+        signal: controller.signal
       }
     );
 
-        const data = await response.json();
+    const rawText = await response.text();
+
+    let data;
+
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      throw new Error(
+        `Quiz server returned invalid data (${response.status}).`
+      );
+    }
 
     if (!response.ok || !data.success) {
-      console.error('Quiz Worker details:', data.details);
-      throw new Error((data.error || 'Quiz generation failed.') + (data.details ? ' — ' + data.details.slice(0, 300) : ''));
+      const detail =
+        data.details ||
+        data.error ||
+        `Server error ${response.status}`;
+
+      throw new Error(detail);
     }
 
     if (
       !Array.isArray(data.questions) ||
       data.questions.length !== QUIZ_TOTAL_QUESTIONS
     ) {
-      throw new Error('The AI did not return exactly 10 questions.');
+      throw new Error(
+        `The AI returned ${
+          Array.isArray(data.questions)
+            ? data.questions.length
+            : 0
+        } questions instead of 10.`
+      );
     }
 
     return data.questions;
-
   } catch (error) {
-    console.error('Quiz generation error:', error);
+    if (error.name === 'AbortError') {
+      throw new Error(
+        'Quiz generation timed out. The video is still available.'
+      );
+    }
+
     throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -206,6 +289,22 @@ let youtubeSeekProtectionInterval = null;
 let youtubeAPIReady = false;
 let pendingYouTubeRequest = null;
 let currentCourseVideoId = null;
+
+let navigationLocked = false;
+
+function runOnceOnNavigation(action) {
+  if (navigationLocked) return;
+
+  navigationLocked = true;
+
+  try {
+    action();
+  } finally {
+    setTimeout(() => {
+      navigationLocked = false;
+    }, 700);
+  }
+}
 
 function $(id) { return document.getElementById(id); }
 
@@ -618,10 +717,16 @@ function renderContinueLearningCard() {
   `;
 
   $('btn-continue-learning').addEventListener('click', () => {
+  runOnceOnNavigation(() => {
     activeCourseId = target.course.id;
     activeCourseType = 'personal';
+
+    $('btn-continue-learning').disabled = true;
+    $('btn-continue-learning').textContent = 'Opening…';
+
     openModule(target.mod.id);
   });
+});
 }
 
 function renderLevelBanner() {
@@ -1735,9 +1840,26 @@ function renderPath() {
     container.appendChild(node);
   });
 
-  container.querySelectorAll('.btn-start').forEach(btn => {
-    btn.addEventListener('click', () => openModule(btn.dataset.mod));
+ container.querySelectorAll('.btn-start').forEach(btn => {
+  btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    runOnceOnNavigation(() => {
+      const moduleId = btn.dataset.mod;
+
+      if (!moduleId) {
+        toast('Module ID is missing.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Opening…';
+
+      openModule(moduleId);
+    });
   });
+});
 
   container.querySelectorAll('.btn-rewatch').forEach(btn => {
     btn.addEventListener('click', (e) => {
