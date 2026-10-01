@@ -73,8 +73,8 @@ async function ensureQuizReadyInBackground(unit, youtubeUrl) {
     Array.isArray(quiz.questions) &&
     quiz.questions.length === QUIZ_TOTAL_QUESTIONS
   ) {
-    updateQuizStatusOnModuleScreen('ready');
-    return;
+   updateQuizStatusOnModuleScreen('ready', unit);
+     return;
   }
 
   const generationKey = `${activeCourseId}:${unit.id}`;
@@ -84,8 +84,7 @@ async function ensureQuizReadyInBackground(unit, youtubeUrl) {
   }
 
   quizGenerationInProgress.add(generationKey);
-  updateQuizStatusOnModuleScreen('generating');
-
+  updateQuizStatusOnModuleScreen('generating', unit);
   try {
     const questions = await generateModuleQuiz(
       unit.name,
@@ -108,30 +107,40 @@ async function ensureQuizReadyInBackground(unit, youtubeUrl) {
     quiz.status = 'failed';
     quiz.errorMessage = error.message || 'Unknown quiz error';
 
-    updateQuizStatusOnModuleScreen('failed');
-    toast('Quiz could not be created. You can try again later.');
+    updateQuizStatusOnModuleScreen('failed', unit);
+     toast('Quiz could not be created. You can try again later.');
   } finally {
     quizGenerationInProgress.delete(generationKey);
   }
 }
 
-function updateQuizStatusOnModuleScreen(status) {
+function updateQuizStatusOnModuleScreen(status, unit) {
   const label = $('timer-label');
 
   if (!label || reviewMode) return;
 
   if (status === 'generating') {
-    label.textContent =
-      'Video ready — quiz is being prepared in the background';
+    label.textContent = timerSecondsLeft > 0
+      ? 'Video ready — quiz is being prepared in the background'
+      : 'Preparing your quiz…';
+    if (timerSecondsLeft <= 0) $('btn-complete-module').disabled = true;
   }
 
-  if (status === 'ready' && timerSecondsLeft > 0) {
-    label.textContent = 'Time remaining';
+  if (status === 'ready') {
+    if (timerSecondsLeft > 0) {
+      label.textContent = 'Time remaining';
+    } else if (unit && unit.quiz && !unit.quiz.passed) {
+      label.textContent = "Time's up — take the quiz to finish";
+      $('btn-complete-module').disabled = true;
+      renderQuiz(unit);
+    }
   }
 
   if (status === 'failed') {
-    label.textContent =
-      'Video ready — quiz unavailable for now';
+    label.textContent = timerSecondsLeft > 0
+      ? 'Video ready — quiz unavailable for now'
+      : 'Ready to complete!';
+    if (timerSecondsLeft <= 0) $('btn-complete-module').disabled = false;
   }
 }
 
@@ -2606,9 +2615,10 @@ function updateTimerDisplay() {
     display.classList.add('done');
     const course = getActiveCourse();
     const mod = course ? getActiveUnit(course) : null;
-    const hasQuiz = mod && mod.quiz && Array.isArray(mod.quiz.questions) && mod.quiz.questions.length === QUIZ_TOTAL_QUESTIONS;
+    const hasQuiz = mod && mod.quiz && Array.isArray(mod.quiz.questions) && mod.quiz.questions.length === QUIZ_TOTAL_QUESTIONS && !mod.quiz.passed;
 
     if (hasQuiz) {
+       
       $('timer-label').textContent = "Time's up — take the quiz to finish";
       $('btn-complete-module').disabled = true;
       renderQuiz(mod);
@@ -2770,7 +2780,20 @@ async function completeModuleNow() {
   }
 }
 
-$('btn-complete-module').addEventListener('click', completeModuleNow);
+$('btn-complete-module').addEventListener('click', () => {
+  const course = getActiveCourse();
+  const unit = course ? getActiveUnit(course) : null;
+  const quiz = unit && unit.quiz;
+  const hasReadyQuiz = quiz && Array.isArray(quiz.questions) && quiz.questions.length === QUIZ_TOTAL_QUESTIONS && !quiz.passed;
+
+  if (hasReadyQuiz) {
+    renderQuiz(unit);
+    toast('Please complete the quiz first.');
+    return;
+  }
+
+  completeModuleNow();
+});
 
 $('btn-add-friend').addEventListener('click', async () => {
   const email = $('friend-email-input').value.trim().toLowerCase();
