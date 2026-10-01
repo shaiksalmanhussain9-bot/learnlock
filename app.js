@@ -3446,69 +3446,6 @@ function showPublicVideoWarningModal(onContinue) {
   });
 }
 
-function renderQuiz(mod) {
-  const quizData = mod.quiz;
-  const container = $('quiz-questions');
-  container.innerHTML = '';
-
-  quizData.questions.forEach((q, qi) => {
-    const div = document.createElement('div');
-    div.className = 'quiz-question';
-    div.innerHTML =
-      `<p><strong>${qi + 1}. ${escapeHtml(q.question)}</strong></p>` +
-      q.options.map((opt, oi) =>
-        `<label class="quiz-option"><input type="radio" name="quiz-q${qi}" value="${oi}"> <span>${escapeHtml(opt)}</span></label>`
-      ).join('');
-    container.appendChild(div);
-  });
-
-  $('quiz-result').innerHTML = '';
-  $('btn-submit-quiz').disabled = false;
-  $('btn-submit-quiz').textContent = 'Submit Quiz';
-  $('quiz-container').style.display = 'block';
-}
-
-$('btn-submit-quiz').addEventListener('click', () => {
-  const course = getActiveCourse();
-  const mod = getActiveUnit(course);
-  const quizData = mod.quiz;
-  const total = quizData.questions.length;
-
-  let answered = 0;
-  let score = 0;
-
-  quizData.questions.forEach((q, qi) => {
-    const selected = document.querySelector(`input[name="quiz-q${qi}"]:checked`);
-    if (selected) {
-      answered++;
-      if (Number(selected.value) === q.correctIndex) score++;
-    }
-  });
-
-  if (answered < total) {
-    toast(`Please answer all ${total} questions.`);
-    return;
-  }
-
-  quizData.attempts = (quizData.attempts || 0) + 1;
-  quizData.score = score;
-  const passed = score >= QUIZ_PASSING_SCORE;
-  const result = $('quiz-result');
-
-  if (passed) {
-    quizData.passed = true;
-    result.innerHTML = `<div class="quiz-pass">🎉 Passed — ${score}/${total}! Completing module…</div>`;
-    $('btn-submit-quiz').disabled = true;
-    setTimeout(completeModuleNow, 900);
-  } else if (quizData.attempts >= QUIZ_MAX_DAILY_ATTEMPTS) {
-    result.innerHTML = `<div class="quiz-fail">📚 Score: ${score}/${total}. You've used all ${QUIZ_MAX_DAILY_ATTEMPTS} attempts for today — come back tomorrow.</div>`;
-    $('btn-submit-quiz').disabled = true;
-  } else {
-    const left = QUIZ_MAX_DAILY_ATTEMPTS - quizData.attempts;
-    result.innerHTML = `<div class="quiz-fail">📚 Score: ${score}/${total}. You need ${QUIZ_PASSING_SCORE}. ${left} attempt${left === 1 ? '' : 's'} left today.</div>`;
-  }
-});
-
 // ← ADD THIS AT THE VERY END OF YOUR FILE
 
 let adMonitorInterval = null;
@@ -3544,3 +3481,92 @@ function stopAdMonitor() {
     adMonitorInterval = null;
   }
 }
+
+function renderQuiz(mod) {
+  const quizData = mod.quiz;
+  const container = $('quiz-questions');
+  container.innerHTML = '';
+
+  quizData.questions.forEach((q, qi) => {
+    const div = document.createElement('div');
+    div.className = 'quiz-question';
+    div.innerHTML =
+      `<p><strong>${qi + 1}. ${escapeHtml(q.question)}</strong></p>` +
+      q.options.map((opt, oi) =>
+        `<label class="quiz-option" id="qopt-${qi}-${oi}"><input type="radio" name="quiz-q${qi}" value="${oi}"> <span>${escapeHtml(opt)}</span></label>`
+      ).join('');
+    container.appendChild(div);
+  });
+
+  $('quiz-result').innerHTML = '';
+  $('btn-submit-quiz').disabled = false;
+  $('btn-submit-quiz').style.display = '';
+  $('btn-submit-quiz').textContent = 'Submit Quiz';
+  $('quiz-container').style.display = 'block';
+}
+
+$('btn-submit-quiz').addEventListener('click', async () => {
+  const course = getActiveCourse();
+  const mod = getActiveUnit(course);
+  const quizData = mod.quiz;
+  const total = quizData.questions.length;
+
+  let answered = 0;
+  let score = 0;
+  const userAnswers = [];
+
+  quizData.questions.forEach((q, qi) => {
+    const selected = document.querySelector(`input[name="quiz-q${qi}"]:checked`);
+    if (selected) {
+      answered++;
+      const chosen = Number(selected.value);
+      userAnswers[qi] = chosen;
+      if (chosen === q.correctIndex) score++;
+    } else {
+      userAnswers[qi] = null;
+    }
+  });
+
+  if (answered < total) {
+    toast(`Please answer all ${total} questions.`);
+    return;
+  }
+
+  // Color each option: green = correct answer, red = your wrong pick. Lock them all.
+  quizData.questions.forEach((q, qi) => {
+    q.options.forEach((opt, oi) => {
+      const label = $(`qopt-${qi}-${oi}`);
+      if (!label) return;
+      label.querySelector('input').disabled = true;
+      if (oi === q.correctIndex) label.classList.add('correct-answer');
+      if (userAnswers[qi] === oi && oi !== q.correctIndex) label.classList.add('wrong-selected');
+    });
+  });
+
+  quizData.attempts = (quizData.attempts || 0) + 1;
+  quizData.score = score;
+  const passed = score >= QUIZ_PASSING_SCORE;
+  const result = $('quiz-result');
+  $('btn-submit-quiz').style.display = 'none';
+
+  if (passed) {
+    quizData.passed = true;
+    result.innerHTML = `<div class="quiz-pass">🎉 Passed — ${score}/${total}! Completing module…</div>`;
+    await saveQuizToCurrentCourse(mod);
+    setTimeout(completeModuleNow, 900);
+    return;
+  }
+
+  await saveQuizToCurrentCourse(mod); // save attempt count so refreshing doesn't reset it
+
+  if (quizData.attempts >= QUIZ_MAX_DAILY_ATTEMPTS) {
+    result.innerHTML = `<div class="quiz-fail">📚 Score: ${score}/${total}. You've used all ${QUIZ_MAX_DAILY_ATTEMPTS} attempts for today — come back tomorrow.</div>`;
+  } else {
+    const left = QUIZ_MAX_DAILY_ATTEMPTS - quizData.attempts;
+    result.innerHTML = `
+      <div class="quiz-fail">📚 Score: ${score}/${total}. You need ${QUIZ_PASSING_SCORE}. You have ${left} attempt${left === 1 ? '' : 's'} left today.</div>
+      <button class="btn-primary" id="btn-retake-quiz" style="margin-top:10px;">🔄 Retake Quiz (${left} left)</button>
+    `;
+    $('btn-retake-quiz').addEventListener('click', () => renderQuiz(mod));
+  }
+});
