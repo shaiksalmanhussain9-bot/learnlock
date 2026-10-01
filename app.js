@@ -3549,11 +3549,10 @@ $('btn-submit-quiz').addEventListener('click', async () => {
   const result = $('quiz-result');
   $('btn-submit-quiz').style.display = 'none';
 
-  if (passed) {
+   if (passed) {
     quizData.passed = true;
-    result.innerHTML = `<div class="quiz-pass">🎉 Passed — ${score}/${total}! Completing module…</div>`;
     await saveQuizToCurrentCourse(mod);
-    setTimeout(completeModuleNow, 900);
+    showScoreCelebration(score, total, mod.name, course.name, completeModuleNow);
     return;
   }
 
@@ -3570,3 +3569,70 @@ $('btn-submit-quiz').addEventListener('click', async () => {
     $('btn-retake-quiz').addEventListener('click', () => renderQuiz(mod));
   }
 });
+
+const SCORE_CELEBRATIONS = {
+  10: { emoji: '🏆', title: 'Perfect Score!', sub: 'Flawless — you nailed every question.' },
+  9:  { emoji: '🌟', title: 'Excellent!', sub: 'Outstanding understanding of the material.' },
+  8:  { emoji: '🎉', title: 'Great Job!', sub: 'Impressive work on this module.' },
+  7:  { emoji: '👍', title: 'Nice Work!', sub: 'You passed — keep this momentum going.' }
+};
+
+function showScoreCelebration(score, total, moduleName, courseName, onContinue) {
+  const info = SCORE_CELEBRATIONS[score] || SCORE_CELEBRATIONS[7];
+  const overlay = document.createElement('div');
+  overlay.className = 'score-popup-overlay';
+  overlay.innerHTML = `
+    <div class="score-popup-card">
+      <div class="score-popup-emoji">${info.emoji}</div>
+      <div class="score-popup-title">${info.title}</div>
+      <div class="score-popup-sub">${score}/${total} — ${info.sub}</div>
+      <button class="btn-primary" id="btn-popup-share">📤 Share this win</button>
+      <button class="btn-secondary" id="btn-popup-close">Continue</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  $('btn-popup-close').addEventListener('click', () => {
+    overlay.remove();
+    if (onContinue) onContinue();
+  });
+
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); if (onContinue) onContinue(); } });
+
+  $('btn-popup-share').addEventListener('click', () => {
+    overlay.remove();
+    showShareCard(score, total, moduleName, courseName, onContinue);
+  });
+}
+
+function showShareCard(score, total, moduleName, courseName, onContinue) {
+  const info = SCORE_CELEBRATIONS[score] || SCORE_CELEBRATIONS[7];
+  const overlay = document.createElement('div');
+  overlay.className = 'score-popup-overlay';
+  overlay.innerHTML = `
+    <div class="score-popup-card">
+      <div class="share-card-preview">
+        <div class="share-card-brand">Learn<span class="lock-mark">Lock</span></div>
+        <div class="share-card-module">${escapeHtml(courseName)} — ${escapeHtml(moduleName)}</div>
+        <div class="share-card-score">${score}/${total}</div>
+        <div class="share-card-badge">${info.emoji} ${info.title}</div>
+      </div>
+      <button class="btn-primary" id="btn-share-whatsapp">📱 Share on WhatsApp</button>
+      <button class="btn-secondary" id="btn-popup-close2">Close</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const shareText = `I just scored ${score}/${total} on "${moduleName}" in ${courseName} on LearnLock! ${info.emoji} ${info.title}`;
+
+  $('btn-share-whatsapp').addEventListener('click', () => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+  });
+
+  $('btn-popup-close2').addEventListener('click', () => {
+    overlay.remove();
+    if (onContinue) onContinue();
+  });
+
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); if (onContinue) onContinue(); } });
+}
