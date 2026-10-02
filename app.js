@@ -1078,9 +1078,10 @@ document.addEventListener('click', function (event) {
   if (destination === 'path') {
     // Stop the timer and seek-guard running in the background — they'd
     // otherwise keep ticking/polling even with the module view hidden.
-    clearInterval(timerInterval);
+        clearInterval(timerInterval);
     timerRunning = false;
     stopForwardSeekProtection();
+    stopTimerSyncWatchdog();
 
     // Re-render before showing: if this module was opened directly from
     // the dashboard's "Continue learning" card, the path view's content
@@ -2602,8 +2603,9 @@ function renderModuleScreen(course, mod, unit, dayIndex, moduleId) {
 
   showView('module');
 
-  // Do not create an endless interval every time a module opens.
+    // Do not create an endless interval every time a module opens.
   startAdMonitorOnce();
+  startTimerSyncWatchdog();
 }
 
 function updateTimerDisplay() {
@@ -3453,14 +3455,19 @@ function startAdMonitorOnce() {
     try {
       const skipButton =
         document.querySelector('.ytp-ad-skip-button') ||
-        document.querySelector('[aria-label*="Skip"]');
+        document.querySelector('.ytp-ad-skip-button-modern') ||
+        document.querySelector('.ytp-skip-ad-button') ||
+        document.querySelector('[class*="skip-button"]') ||
+        document.querySelector('[aria-label*="Skip"]') ||
+        document.querySelector('[aria-label*="skip"]');
 
       if (skipButton && skipButton.offsetParent !== null) {
         skipButton.click();
       }
 
       const closeButton =
-        document.querySelector('.ytp-ad-overlay-close-button');
+        document.querySelector('.ytp-ad-overlay-close-button') ||
+        document.querySelector('[class*="ad-overlay-close"]');
 
       if (closeButton && closeButton.offsetParent !== null) {
         closeButton.click();
@@ -3468,7 +3475,7 @@ function startAdMonitorOnce() {
     } catch (error) {
       // Ignore temporary YouTube DOM changes.
     }
-  }, 500);
+  }, 150);
 }
 
 function stopAdMonitor() {
@@ -3631,4 +3638,34 @@ function showShareCard(score, total, moduleName, courseName, onContinue) {
   });
 
   overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); if (onContinue) onContinue(); } });
+}
+
+let timerSyncWatchdog = null;
+
+function startTimerSyncWatchdog() {
+  stopTimerSyncWatchdog();
+  timerSyncWatchdog = setInterval(() => {
+    if (reviewMode || !youtubePlayer || typeof youtubePlayer.getPlayerState !== 'function') return;
+    const state = youtubePlayer.getPlayerState();
+
+    if (state === YT.PlayerState.PLAYING && !isAdPlaying() && timerSecondsLeft > 0 && !timerRunning) {
+      startTimerInterval();
+    }
+
+    if (state === YT.PlayerState.PAUSED && timerRunning && !isSanctionedSeek) {
+      timerRunning = false;
+      clearInterval(timerInterval);
+      $('btn-timer-pause').style.display = 'none';
+      $('btn-timer-start').style.display = 'inline-block';
+      $('btn-timer-start').textContent = '▶ Resume';
+      showPauseShield();
+    }
+  }, 500);
+}
+
+function stopTimerSyncWatchdog() {
+  if (timerSyncWatchdog) {
+    clearInterval(timerSyncWatchdog);
+    timerSyncWatchdog = null;
+  }
 }
