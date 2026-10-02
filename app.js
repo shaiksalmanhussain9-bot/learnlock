@@ -3351,20 +3351,7 @@ function initLearningCalendar() {
   calendarMode = 'month';
   renderLearningProgressCalendar();
 }
-
-function monitorAndSkipAds() {
-  setInterval(() => {
-    try {
-      const skipBtn = document.querySelector('.ytp-ad-skip-button') || 
-                      document.querySelector('[aria-label*="Skip"]');
-      if (skipBtn && skipBtn.offsetParent !== null) skipBtn.click();
-      
-      const closeBtn = document.querySelector('.ytp-ad-overlay-close-button');
-      if (closeBtn && closeBtn.offsetParent !== null) closeBtn.click();
-    } catch (e) {}
-  }, 250);
-}
-   
+ 
 function showPublicVideoWarningModal(onContinue) {
   const html = `
     <div class="modal-overlay" id="public-video-modal-overlay">
@@ -3377,7 +3364,7 @@ function showPublicVideoWarningModal(onContinue) {
             class="modal-close"
             id="btn-close-public-modal"
           >
-            ✕
+            
           </button>
         </div>
 
@@ -3445,37 +3432,122 @@ function showPublicVideoWarningModal(onContinue) {
 }
 
 // ← ADD THIS AT THE VERY END OF YOUR FILE
-
 let adMonitorInterval = null;
 
+function getVisibleYouTubeSkipButton() {
+  const selectors = [
+    '.ytp-ad-skip-button',
+    '.ytp-ad-skip-button-modern',
+    '.ytp-skip-ad-button',
+    'button.ytp-ad-skip-button',
+    '[aria-label="Skip ad"]',
+    '[aria-label="Skip Ad"]',
+    '[aria-label*="Skip ad"]',
+    '[aria-label*="Skip Ad"]'
+  ];
+
+  for (const selector of selectors) {
+    const button = document.querySelector(selector);
+
+    if (
+      button &&
+      button.offsetParent !== null &&
+      !button.disabled
+    ) {
+      return button;
+    }
+  }
+
+  const buttons = Array.from(
+    document.querySelectorAll('button')
+  );
+
+  return buttons.find(button => {
+    const text = (button.textContent || '').trim();
+
+    return (
+      button.offsetParent !== null &&
+      !button.disabled &&
+      /skip\s*(ad)?/i.test(text)
+    );
+  }) || null;
+}
+
+function isYouTubeAdShowing() {
+  return Boolean(
+    document.querySelector('.ad-showing') ||
+    document.querySelector('.ytp-ad-player-overlay') ||
+    document.querySelector('.ytp-ad-text') ||
+    document.querySelector('.ytp-ad-module')
+  );
+}
+
+function pauseLearningTimerForAd() {
+  if (!timerRunning) {
+    return;
+  }
+
+  timerRunning = false;
+  clearInterval(timerInterval);
+
+  const pauseButton = document.getElementById(
+    'btn-timer-pause'
+  );
+
+  const startButton = document.getElementById(
+    'btn-timer-start'
+  );
+
+  const label = document.getElementById(
+    'timer-label'
+  );
+
+  if (pauseButton) {
+    pauseButton.style.display = 'none';
+  }
+
+  if (startButton) {
+    startButton.style.display = 'inline-block';
+    startButton.textContent = '▶ Resume';
+  }
+
+  if (label) {
+    label.textContent = 'Advertisement playing — timer paused';
+  }
+}
+
 function startAdMonitorOnce() {
-  if (adMonitorInterval) return;
+  if (adMonitorInterval) {
+    return;
+  }
 
   adMonitorInterval = setInterval(() => {
     try {
-      const skipButton =
-        document.querySelector('.ytp-ad-skip-button') ||
-        document.querySelector('.ytp-ad-skip-button-modern') ||
-        document.querySelector('.ytp-skip-ad-button') ||
-        document.querySelector('[class*="skip-button"]') ||
-        document.querySelector('[aria-label*="Skip"]') ||
-        document.querySelector('[aria-label*="skip"]');
+      const skipButton = getVisibleYouTubeSkipButton();
 
-      if (skipButton && skipButton.offsetParent !== null) {
+      if (skipButton) {
         skipButton.click();
       }
 
-      const closeButton =
-        document.querySelector('.ytp-ad-overlay-close-button') ||
-        document.querySelector('[class*="ad-overlay-close"]');
+      const overlayCloseButton = document.querySelector(
+        '.ytp-ad-overlay-close-button'
+      );
 
-      if (closeButton && closeButton.offsetParent !== null) {
-        closeButton.click();
+      if (
+        overlayCloseButton &&
+        overlayCloseButton.offsetParent !== null
+      ) {
+        overlayCloseButton.click();
+      }
+
+      if (isYouTubeAdShowing()) {
+        pauseLearningTimerForAd();
       }
     } catch (error) {
-      // Ignore temporary YouTube DOM changes.
+      // The YouTube player changes its internal page often.
+      // Ignore temporary selector errors.
     }
-  }, 150);
+  }, 100);
 }
 
 function stopAdMonitor() {
