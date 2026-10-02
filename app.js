@@ -2114,9 +2114,8 @@ function onYouTubeStateChange(event) {
       return;
     }
 
-    if (timerSecondsLeft > 0 && !timerRunning && $('btn-timer-start').dataset.playRequested === 'true') {
+    if (timerSecondsLeft > 0 && !timerRunning) {
       startTimerInterval();
-      $('btn-timer-start').dataset.playRequested = 'false';
     }
   }
 
@@ -2637,15 +2636,12 @@ function updateTimerDisplay() {
 $('btn-timer-start').addEventListener('click', () => {
   if (timerRunning) return;
 
-  $('btn-timer-start').dataset.playRequested = 'true';
-
   if (youtubePlayer && typeof youtubePlayer.playVideo === 'function') {
     youtubePlayer.playVideo();
     checkYouTubeSkip();
+  } else {
+    startTimerInterval(); // no video loaded — still let the student progress
   }
-
-  $('btn-timer-start').style.display = 'none';
-  $('btn-timer-pause').style.display = 'inline-block';
 });
 
 $('btn-timer-pause').addEventListener('click', () => {
