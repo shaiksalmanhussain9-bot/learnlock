@@ -1151,13 +1151,6 @@ function registerCompletionForStreak() {
   userStats.lastActiveDate = today;
 }
 
-      userStats.achievements.push(a.id);
-      newlyEarned.push(a);
-    }
-  });
-  return newlyEarned;
-}
-
 function checkStreakMilestones() {
   if (!userStats.streakMilestones) userStats.streakMilestones = [];
   const newlyReached = [];
