@@ -58,6 +58,12 @@ const ACHIEVEMENTS = [
 
 let pendingStreakToast = null;
 
+const QUIZ_PASSING_SCORE = 7;
+const QUIZ_TOTAL_QUESTIONS = 10;
+const QUIZ_MAX_DAILY_ATTEMPTS = 3;
+
+let quizGenerationInProgress = new Set();
+
 let currentUser = null;
 let userStats = null;
 let coursesCache = [];
