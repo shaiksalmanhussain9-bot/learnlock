@@ -1790,9 +1790,31 @@ pointer-events: auto;
 .quiz-fail { padding: 14px; border-radius: 10px; background: rgba(220,60,60,.15); margin-top: 14px; }
 
 /* ---------- Quiz answer coloring (after submit) ---------- */
-.quiz-option.correct-answer { background: rgba(52,211,153,0.18); border-color: #34D399; }
-.quiz-option.wrong-selected { background: rgba(248,113,113,0.18); border-color: #F87171; }
-.quiz-option input:disabled { cursor: not-allowed; }
+.quiz-option.correct-answer {
+  background: #d1fae5 !important;
+  border: 2px solid #16a34a !important;
+  color: #166534 !important;
+}
+
+.quiz-option.correct-answer span::after {
+  content: " ✓ Correct answer";
+  font-weight: 700;
+}
+
+.quiz-option.wrong-selected {
+  background: #fee2e2 !important;
+  border: 2px solid #dc2626 !important;
+  color: #991b1b !important;
+}
+
+.quiz-option.wrong-selected span::after {
+  content: " ✗ Your answer — Wrong";
+  font-weight: 700;
+}
+
+.quiz-option input:disabled {
+  cursor: not-allowed;
+}
 
 /* ---------- Score celebration popup ---------- */
 .score-popup-overlay {
