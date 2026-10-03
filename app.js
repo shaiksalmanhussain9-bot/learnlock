@@ -3193,8 +3193,7 @@ $('btn-complete-module').addEventListener('click', async () => {
   $('btn-complete-module').disabled = true;
   $('btn-complete-module').textContent = 'Saving…';
 
-  const course = getActiveCourse();
-  const modules = course.modules;
+   const modules = course.modules;
   const idx = modules.findIndex(m => m.id === activeModuleId);
   const mod = modules[idx];
 
