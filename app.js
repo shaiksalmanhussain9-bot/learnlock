@@ -1173,16 +1173,17 @@ function checkStreakMilestones() {
   return newlyReached;
 }
 
-function checkNewRewards() {
+function checkNewAchievements() {
   const newlyEarned = [];
 
-  REWARDS.forEach(reward => {
-    if (
-      userStats.points >= reward.points &&
-      !userStats.rewards.includes(reward.points)
-    ) {
-      userStats.rewards.push(reward.points);
-      newlyEarned.push(reward);
+  if (!Array.isArray(userStats.achievements)) {
+    userStats.achievements = [];
+  }
+
+  ACHIEVEMENTS.forEach(a => {
+    if (!userStats.achievements.includes(a.id) && a.check(userStats)) {
+      userStats.achievements.push(a.id);
+      newlyEarned.push(a);
     }
   });
 
