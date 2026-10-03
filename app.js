@@ -2522,15 +2522,46 @@ function checkYouTubeSkip() {
   const currentTime = youtubePlayer.getCurrentTime();
 
   if (isSanctionedSeek) {
-    // We just moved the playhead ourselves (rewind button) — accept it.
+    // Keep existing rewind behavior exactly as it is.
     youtubeLastPolledSeconds = currentTime;
-    youtubeMaxWatchedSeconds = Math.max(youtubeMaxWatchedSeconds, currentTime);
+    youtubeMaxWatchedSeconds = Math.max(
+      youtubeMaxWatchedSeconds,
+      currentTime
+    );
     return false;
   }
 
   const course = getActiveCourse();
   const unit = course ? getActiveUnit(course) : null;
-  const unitStartSeconds = unit ? timeToSeconds(unit.startTime) : 0;
+  const unitStartSeconds = unit
+    ? timeToSeconds(unit.startTime)
+    : 0;
+
+  const unitEndSeconds = unit
+    ? timeToSeconds(unit.endTime)
+    : Infinity;
+
+  // NEVER allow the video to go beyond this module's end time.
+  if (currentTime >= unitEndSeconds) {
+    youtubePlayer.seekTo(unitEndSeconds, true);
+    youtubeLastPolledSeconds = unitEndSeconds;
+    youtubeMaxWatchedSeconds = Math.max(
+      youtubeMaxWatchedSeconds,
+      unitEndSeconds
+    );
+
+    youtubePlayer.pauseVideo();
+
+    // Completion is allowed only when BOTH conditions are satisfied:
+    // 1. Timer is finished
+    // 2. Video reached module end time
+    if (timerSecondsLeft <= 0) {
+      updateTimerDisplay();
+      $('btn-complete-module').disabled = false;
+    }
+
+    return true;
+  }
 
   // Never let native dragging skip ahead of what's actually been watched.
   if (currentTime > youtubeMaxWatchedSeconds + 1) {
@@ -2539,26 +2570,28 @@ function checkYouTubeSkip() {
     return true;
   }
 
-  // Never let native dragging go before this module/sub-module's start —
-  // this is what let people drag into an earlier, locked module.
+  // Never let native dragging go before this module/sub-module's start.
   if (currentTime < unitStartSeconds) {
-    const fallback = Math.max(unitStartSeconds, youtubeLastPolledSeconds);
+    const fallback = Math.max(
+      unitStartSeconds,
+      youtubeLastPolledSeconds
+    );
+
     youtubePlayer.seekTo(fallback, true);
     youtubeLastPolledSeconds = fallback;
     return true;
   }
 
-  // Anything else that jumps more than ~2.5s between 100ms polls is a
-  // scrubber drag, not normal playback — revert it. Legitimate jumps
-  // (the rewind button, initial module positioning) are exempted above
-  // via isSanctionedSeek.
+  // Anything else that jumps more than ~2.5s between polls is a scrubber drag.
   const delta = currentTime - youtubeLastPolledSeconds;
+
   if (Math.abs(delta) > 2.5) {
     youtubePlayer.seekTo(youtubeLastPolledSeconds, true);
     return true;
   }
 
   youtubeLastPolledSeconds = currentTime;
+
   youtubeMaxWatchedSeconds = Math.max(
     youtubeMaxWatchedSeconds,
     currentTime
@@ -2566,7 +2599,6 @@ function checkYouTubeSkip() {
 
   return false;
 }
-
 
 function startForwardSeekProtection() {
   stopForwardSeekProtection();
@@ -2710,33 +2742,18 @@ function startTimerInterval() {
       updateTimerDisplay();
     }
 
-    if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
-      const course = getActiveCourse();
-      const mod = getActiveUnit(course);
+    // When timer reaches 00:00:
+    // STOP ONLY THE TIMER.
+    // DO NOT STOP THE VIDEO.
+    if (timerSecondsLeft <= 0) {
+      timerSecondsLeft = 0;
+      updateTimerDisplay();
 
-      if (mod) {
-        const endSeconds = timeToSeconds(mod.endTime);
-        const currentSeconds = youtubePlayer.getCurrentTime();
+      clearInterval(timerInterval);
+      timerRunning = false;
 
-        if (currentSeconds >= endSeconds && youtubeMaxWatchedSeconds >= endSeconds) {
-          youtubePlayer.pauseVideo();
-          timerSecondsLeft = 0;
-          updateTimerDisplay();
-          $('btn-complete-module').disabled = false;
-        }
-      }
+      $('btn-timer-pause').style.display = 'none';
     }
-
-   if (timerSecondsLeft <= 0) {
-  clearInterval(timerInterval);
-  timerRunning = false;
-  $('btn-timer-pause').style.display = 'none';
-  
-  // STOP VIDEO when timer reaches 00:00:00
-  if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
-    youtubePlayer.pauseVideo();
-  }
-}
   }, 1000);
 }
 
