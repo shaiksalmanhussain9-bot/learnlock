@@ -64,6 +64,791 @@ const QUIZ_MAX_DAILY_ATTEMPTS = 3;
 
 let quizGenerationInProgress = new Set();
 
+// ==================== LEARNLOCK AI QUIZ SYSTEM ====================
+
+const QUIZ_WORKER_URL =
+  'https://learnlock-quiz.shaiksalmanhussain9.workers.dev';
+
+function getQuizKey() {
+  return `${activeCourseId}:${activeModuleId}:${activeSubModuleId || 'main'}`;
+}
+
+function getQuizTodayKey() {
+  const now = new Date();
+
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function prepareQuizState(unit) {
+  if (!unit.quiz) {
+    unit.quiz = {
+      questions: [],
+      generatedAt: null,
+      attempts: 0,
+      attemptDate: getQuizTodayKey(),
+      score: null,
+      passed: false
+    };
+  }
+
+  const today = getQuizTodayKey();
+
+  if (unit.quiz.attemptDate !== today) {
+    unit.quiz.attempts = 0;
+    unit.quiz.attemptDate = today;
+  }
+
+  return unit.quiz;
+}
+
+async function saveQuizToCurrentCourse(unit) {
+  const course = getActiveCourse();
+
+  if (!course || !unit) return;
+
+  const modules = course.modules;
+
+  if (activeCourseType === 'shared') {
+    await db
+      .collection('sharedCourses')
+      .doc(activeCourseId)
+      .update({
+        [`progress.${currentUser.uid}`]: modules
+      });
+
+    return;
+  }
+
+  await coursesRef()
+    .doc(activeCourseId)
+    .update({
+      modules
+    });
+
+  await loadCourses();
+}
+
+async function generateModuleQuiz(
+  moduleName,
+  youtubeUrl,
+  startTime,
+  endTime
+) {
+  const controller = new AbortController();
+
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, 45000);
+
+  try {
+    const response = await fetch(
+      QUIZ_WORKER_URL,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          moduleName,
+          youtubeUrl,
+          startTime,
+          endTime
+        }),
+        signal: controller.signal
+      }
+    );
+
+    const rawText = await response.text();
+
+    let data;
+
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      throw new Error(
+        `Quiz server returned invalid data (${response.status}).`
+      );
+    }
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.details ||
+        data.error ||
+        `Quiz server error ${response.status}`
+      );
+    }
+
+    if (
+      !Array.isArray(data.questions) ||
+      data.questions.length !== QUIZ_TOTAL_QUESTIONS
+    ) {
+      throw new Error(
+        `AI returned ${
+          Array.isArray(data.questions)
+            ? data.questions.length
+            : 0
+        } questions instead of 10.`
+      );
+    }
+
+    return data.questions;
+
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Quiz generation timed out.');
+    }
+
+    throw error;
+
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function ensureQuizReadyInBackground(unit, youtubeUrl) {
+  if (
+    reviewMode ||
+    !unit ||
+    !youtubeUrl
+  ) {
+    return;
+  }
+
+  const quiz = prepareQuizState(unit);
+
+  if (
+    Array.isArray(quiz.questions) &&
+    quiz.questions.length === QUIZ_TOTAL_QUESTIONS
+  ) {
+    return;
+  }
+
+  const generationKey =
+    `${activeCourseId}:${unit.id}`;
+
+  if (
+    quizGenerationInProgress.has(generationKey)
+  ) {
+    return;
+  }
+
+  quizGenerationInProgress.add(generationKey);
+
+  try {
+    console.log(
+      'Generating quiz for:',
+      unit.name
+    );
+
+    const questions =
+      await generateModuleQuiz(
+        unit.name,
+        youtubeUrl,
+        unit.startTime,
+        unit.endTime
+      );
+
+    quiz.questions = questions;
+    quiz.generatedAt = Date.now();
+    quiz.passed = false;
+
+    await saveQuizToCurrentCourse(unit);
+
+    console.log(
+      'Quiz ready:',
+      unit.name
+    );
+
+  } catch (error) {
+    console.error(
+      'Quiz generation failed:',
+      error
+    );
+
+  } finally {
+    quizGenerationInProgress.delete(
+      generationKey
+    );
+  }
+}
+
+function createQuizOverlay() {
+  const old =
+    document.getElementById(
+      'learnlock-quiz-overlay'
+    );
+
+  if (old) old.remove();
+
+  const overlay =
+    document.createElement('div');
+
+  overlay.id =
+    'learnlock-quiz-overlay';
+
+  overlay.style.cssText = `
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    background:rgba(0,0,0,.94);
+    overflow-y:auto;
+    padding:25px 15px;
+  `;
+
+  const box =
+    document.createElement('div');
+
+  box.style.cssText = `
+    max-width:850px;
+    margin:0 auto;
+    background:#111827;
+    color:white;
+    padding:25px;
+    border-radius:16px;
+    font-family:inherit;
+  `;
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  return {
+    overlay,
+    box
+  };
+}
+
+async function runModuleQuiz(unit) {
+  const quiz = prepareQuizState(unit);
+
+  if (
+    !Array.isArray(quiz.questions) ||
+    quiz.questions.length !== QUIZ_TOTAL_QUESTIONS
+  ) {
+    toast(
+      'Quiz is still being prepared. Please wait a moment.'
+    );
+
+    ensureQuizReadyInBackground(
+      unit,
+      getActiveCourse()?.source
+    );
+
+    return false;
+  }
+
+  if (quiz.passed) {
+    return true;
+  }
+
+  if (
+    quiz.attempts >=
+    QUIZ_MAX_DAILY_ATTEMPTS
+  ) {
+    toast(
+      'You have used all 3 quiz attempts for today. Try again tomorrow.'
+    );
+
+    return false;
+  }
+
+  const {
+    overlay,
+    box
+  } = createQuizOverlay();
+
+  let currentQuestion = 0;
+
+  const answers =
+    new Array(
+      QUIZ_TOTAL_QUESTIONS
+    ).fill(null);
+
+  function getOptions(question) {
+    if (
+      Array.isArray(question.options)
+    ) {
+      return question.options;
+    }
+
+    if (
+      Array.isArray(question.choices)
+    ) {
+      return question.choices;
+    }
+
+    return [];
+  }
+
+  function getCorrectIndex(question) {
+    if (
+      Number.isInteger(
+        question.correctIndex
+      )
+    ) {
+      return question.correctIndex;
+    }
+
+    const correct =
+      question.correctAnswer ??
+      question.correct_answer ??
+      question.correctOption ??
+      question.correct_option ??
+      question.answer;
+
+    const options =
+      getOptions(question);
+
+    const index =
+      options.findIndex(
+        option =>
+          String(option)
+            .trim()
+            .toLowerCase() ===
+          String(correct)
+            .trim()
+            .toLowerCase()
+      );
+
+    if (index >= 0) {
+      return index;
+    }
+
+    const letter =
+      String(correct || '')
+        .trim()
+        .toUpperCase();
+
+    if (/^[A-D]$/.test(letter)) {
+      return (
+        letter.charCodeAt(0) -
+        65
+      );
+    }
+
+    const number =
+      Number(correct);
+
+    if (
+      Number.isInteger(number) &&
+      number >= 1 &&
+      number <= 4
+    ) {
+      return number - 1;
+    }
+
+    return -1;
+  }
+
+  function renderQuestion() {
+    const question =
+      quiz.questions[currentQuestion];
+
+    const options =
+      getOptions(question);
+
+    box.innerHTML = `
+      <div style="
+        font-size:14px;
+        opacity:.7;
+        margin-bottom:10px;
+      ">
+        Module Quiz
+      </div>
+
+      <div style="
+        font-size:14px;
+        opacity:.7;
+        margin-bottom:10px;
+      ">
+        Question ${currentQuestion + 1}
+        of ${QUIZ_TOTAL_QUESTIONS}
+      </div>
+
+      <div style="
+        height:6px;
+        background:#374151;
+        border-radius:10px;
+        overflow:hidden;
+        margin-bottom:25px;
+      ">
+        <div style="
+          width:${
+            ((currentQuestion + 1) /
+            QUIZ_TOTAL_QUESTIONS) * 100
+          }%;
+          height:100%;
+          background:#22c55e;
+        "></div>
+      </div>
+
+      <h2 style="
+        line-height:1.5;
+        margin-bottom:25px;
+      ">
+        ${escapeHtml(
+          question.question ||
+          question.text ||
+          ''
+        )}
+      </h2>
+
+      <div id="learnlock-quiz-options"></div>
+
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        gap:10px;
+        margin-top:30px;
+      ">
+        <button
+          id="quiz-prev"
+          type="button"
+          style="
+            padding:12px 20px;
+            border:0;
+            border-radius:8px;
+            cursor:pointer;
+          "
+        >
+          Previous
+        </button>
+
+        <button
+          id="quiz-next"
+          type="button"
+          style="
+            padding:12px 20px;
+            border:0;
+            border-radius:8px;
+            cursor:pointer;
+          "
+        >
+          ${
+            currentQuestion ===
+            QUIZ_TOTAL_QUESTIONS - 1
+              ? 'Submit Quiz'
+              : 'Next'
+          }
+        </button>
+      </div>
+    `;
+
+    const optionsContainer =
+      box.querySelector(
+        '#learnlock-quiz-options'
+      );
+
+    options.forEach(
+      (option, index) => {
+
+        const button =
+          document.createElement(
+            'button'
+          );
+
+        button.type = 'button';
+
+        button.textContent =
+          `${String.fromCharCode(65 + index)}. ${option}`;
+
+        button.style.cssText = `
+          display:block;
+          width:100%;
+          text-align:left;
+          margin:10px 0;
+          padding:15px;
+          border:2px solid #374151;
+          border-radius:10px;
+          background:#1f2937;
+          color:white;
+          cursor:pointer;
+          font-size:15px;
+        `;
+
+        if (
+          answers[currentQuestion] ===
+          index
+        ) {
+          button.style.borderColor =
+            '#22c55e';
+        }
+
+        button.onclick = () => {
+
+          answers[currentQuestion] =
+            index;
+
+          [
+            ...optionsContainer
+              .children
+          ].forEach(child => {
+            child.style.borderColor =
+              '#374151';
+          });
+
+          button.style.borderColor =
+            '#22c55e';
+        };
+
+        optionsContainer.appendChild(
+          button
+        );
+      }
+    );
+
+    const previous =
+      box.querySelector(
+        '#quiz-prev'
+      );
+
+    previous.disabled =
+      currentQuestion === 0;
+
+    previous.onclick = () => {
+
+      if (currentQuestion > 0) {
+        currentQuestion--;
+        renderQuestion();
+      }
+    };
+
+    box.querySelector(
+      '#quiz-next'
+    ).onclick = () => {
+
+      if (
+        answers[currentQuestion] ===
+        null
+      ) {
+        toast(
+          'Please select an answer.'
+        );
+        return;
+      }
+
+      if (
+        currentQuestion <
+        QUIZ_TOTAL_QUESTIONS - 1
+      ) {
+        currentQuestion++;
+        renderQuestion();
+        return;
+      }
+
+      submitQuiz();
+    };
+  }
+
+  async function submitQuiz() {
+
+    let score = 0;
+
+    quiz.questions.forEach(
+      (question, index) => {
+
+        if (
+          answers[index] !== null &&
+          answers[index] ===
+          getCorrectIndex(question)
+        ) {
+          score++;
+        }
+      }
+    );
+
+    quiz.attempts =
+      (quiz.attempts || 0) + 1;
+
+    quiz.score = score;
+    quiz.attemptDate =
+      getQuizTodayKey();
+
+    const passed =
+      score >=
+      QUIZ_PASSING_SCORE;
+
+    if (passed) {
+      quiz.passed = true;
+
+      await saveQuizToCurrentCourse(
+        unit
+      );
+
+      box.innerHTML = `
+        <div style="
+          text-align:center;
+          padding:35px 10px;
+        ">
+          <div style="font-size:55px;">
+            🎉
+          </div>
+
+          <h2>
+            Quiz Passed!
+          </h2>
+
+          <p style="
+            font-size:24px;
+            margin:20px 0;
+          ">
+            Score:
+            <strong>${score}/10</strong>
+          </p>
+
+          <p>
+            You passed with
+            ${QUIZ_PASSING_SCORE}/10 or higher.
+          </p>
+
+          <button
+            id="quiz-continue"
+            type="button"
+            style="
+              margin-top:25px;
+              padding:12px 25px;
+              border:0;
+              border-radius:8px;
+              cursor:pointer;
+            "
+          >
+            Continue
+          </button>
+        </div>
+      `;
+
+      box.querySelector(
+        '#quiz-continue'
+      ).onclick = () => {
+        overlay.remove();
+      };
+
+      return;
+    }
+
+    await saveQuizToCurrentCourse(
+      unit
+    );
+
+    const attemptsLeft =
+      QUIZ_MAX_DAILY_ATTEMPTS -
+      quiz.attempts;
+
+    box.innerHTML = `
+      <div style="
+        text-align:center;
+        padding:35px 10px;
+      ">
+        <div style="font-size:55px;">
+          ❌
+        </div>
+
+        <h2>
+          Quiz Not Passed
+        </h2>
+
+        <p style="
+          font-size:24px;
+          margin:20px 0;
+        ">
+          Score:
+          <strong>${score}/10</strong>
+        </p>
+
+        ${
+          attemptsLeft > 0
+            ? `
+              <p>
+                You need
+                ${QUIZ_PASSING_SCORE}/10.
+              </p>
+
+              <p>
+                Attempts remaining today:
+                ${attemptsLeft}
+              </p>
+
+              <button
+                id="quiz-retake"
+                type="button"
+                style="
+                  margin-top:20px;
+                  padding:12px 25px;
+                  border:0;
+                  border-radius:8px;
+                  cursor:pointer;
+                "
+              >
+                Retake Quiz
+              </button>
+            `
+            : `
+              <p>
+                You used all 3 attempts today.
+                Try again tomorrow.
+              </p>
+            `
+        }
+
+        <button
+          id="quiz-close"
+          type="button"
+          style="
+            margin-top:20px;
+            margin-left:10px;
+            padding:12px 25px;
+            border:0;
+            border-radius:8px;
+            cursor:pointer;
+          "
+        >
+          Close
+        </button>
+      </div>
+    `;
+
+    box.querySelector(
+      '#quiz-close'
+    ).onclick = () => {
+      overlay.remove();
+    };
+
+    const retake =
+      box.querySelector(
+        '#quiz-retake'
+      );
+
+    if (retake) {
+      retake.onclick = () => {
+        renderQuestion();
+      };
+    }
+  }
+
+  renderQuestion();
+
+  return new Promise(resolve => {
+
+    const check =
+      setInterval(() => {
+
+        if (
+          !document.body.contains(
+            overlay
+          )
+        ) {
+          clearInterval(check);
+
+          resolve(
+            quiz.passed === true
+          );
+        }
+
+      }, 200);
+  });
+}
+
+// ==================== END QUIZ SYSTEM ====================
+
 let currentUser = null;
 let userStats = null;
 let coursesCache = [];
@@ -2237,6 +3022,12 @@ if (extraNoteEl) extraNoteEl.style.display = 'block';
 
 showView('module');
 monitorAndSkipAds();
+
+// QUIZ: generate this module's quiz in the background
+ensureQuizReadyInBackground(
+  unit,
+  course.source
+);
 }
 
 function openModuleForReview(moduleId, subModuleId) {
@@ -2280,38 +3071,7 @@ function openModuleForReview(moduleId, subModuleId) {
   timerRunning = false;
   clearInterval(timerInterval);
 
-   // QUIZ: prepare AI quiz for this module in the background
-if (!reviewMode && unit) {
-  const quizKey = `${activeCourseId}_${moduleId}_${activeSubModuleId || 'main'}`;
-
-  if (!quizGenerationInProgress.has(quizKey)) {
-    quizGenerationInProgress.add(quizKey);
-
-    generateModuleQuiz(
-      unit.name || mod.name,
-      course.source,
-      unit.startTime,
-      unit.endTime
-    )
-      .then(questions => {
-        localStorage.setItem(
-          `learnlock_quiz_${quizKey}`,
-          JSON.stringify({
-            questions,
-            generatedAt: Date.now()
-          })
-        );
-      })
-      .catch(error => {
-        console.error('Quiz generation failed:', error);
-      })
-      .finally(() => {
-        quizGenerationInProgress.delete(quizKey);
-      });
-  }
-}
-
-  if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
+   if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
     youtubePlayer.pauseVideo();
   }
 
@@ -2377,49 +3137,55 @@ $('btn-timer-pause').addEventListener('click', () => {
 $('btn-complete-module').addEventListener('click', async () => {
   if (reviewMode) return;
 
-   // QUIZ: user must pass the module quiz before completion
-if (!reviewMode) {
-  const quizKey = `${activeCourseId}_${activeModuleId}_${activeSubModuleId || 'main'}`;
-  const savedQuiz = localStorage.getItem(`learnlock_quiz_${quizKey}`);
+    const course = getActiveCourse();
 
-  if (!savedQuiz) {
-    toast('Quiz is still being prepared. Please wait a moment.');
+  if (!course) {
+    toast('Course data is not available.');
     return;
   }
 
-  let quizData;
+  const unit = getActiveUnit(course);
 
-  try {
-    quizData = JSON.parse(savedQuiz);
-  } catch (error) {
-    console.error('Invalid saved quiz:', error);
-    toast('Quiz data is invalid. Please try again.');
+  if (!unit) {
+    toast('Module data is not available.');
     return;
   }
 
+  // The video/timer must be finished first.
+  if (timerSecondsLeft > 0) {
+    toast('Finish the module timer first.');
+    return;
+  }
+
+  const quiz = prepareQuizState(unit);
+
+  // Quiz must be generated before completion.
   if (
-    !quizData.questions ||
-    !Array.isArray(quizData.questions) ||
-    quizData.questions.length !== QUIZ_TOTAL_QUESTIONS
+    !Array.isArray(quiz.questions) ||
+    quiz.questions.length !== QUIZ_TOTAL_QUESTIONS
   ) {
-    toast('Quiz is not ready yet. Please wait a moment.');
+    toast(
+      'Quiz is still being prepared. Please wait a moment.'
+    );
+
+    ensureQuizReadyInBackground(
+      unit,
+      course.source
+    );
+
     return;
   }
 
-  const quizScore = Number(
-    prompt(
-      `Module quiz ready: 10 questions.\n\nYou must score at least ${QUIZ_PASSING_SCORE}/10 to complete this module.\n\nEnter your quiz score after completing the quiz:`
-    )
-  );
+  // Quiz is required unless already passed.
+  if (!quiz.passed) {
 
-  if (
-    !Number.isFinite(quizScore) ||
-    quizScore < QUIZ_PASSING_SCORE
-  ) {
-    toast(`Quiz not passed. You need ${QUIZ_PASSING_SCORE}/10 or higher.`);
-    return;
+    const passed =
+      await runModuleQuiz(unit);
+
+    if (!passed) {
+      return;
+    }
   }
-}
 
   stopForwardSeekProtection();
   clearInterval(timerInterval);
