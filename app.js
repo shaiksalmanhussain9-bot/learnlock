@@ -1175,14 +1175,27 @@ function checkNewAchievements() {
 
   ACHIEVEMENTS.forEach(a => {
     if (!userStats.achievements.includes(a.id) && a.check(userStats)) {
-      userStats.achievements.push(a.id);
-      newlyEarned.push(a);
+
+       function checkNewRewards() {
+  const newlyEarned = [];
+
+  if (!Array.isArray(userStats.rewards)) {
+    userStats.rewards = [];
+  }
+
+  REWARDS.forEach(reward => {
+    if (
+      userStats.points >= reward.points &&
+      !userStats.rewards.includes(reward.points)
+    ) {
+      userStats.rewards.push(reward.points);
+      newlyEarned.push(reward);
     }
   });
 
   return newlyEarned;
 }
-
+     
 function renderBadges(badges, containerId) {
   const container = $(containerId);
   if (!container) return;
