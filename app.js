@@ -2280,6 +2280,37 @@ function openModuleForReview(moduleId, subModuleId) {
   timerRunning = false;
   clearInterval(timerInterval);
 
+   // QUIZ: prepare AI quiz for this module in the background
+if (!reviewMode && unit) {
+  const quizKey = `${activeCourseId}_${moduleId}_${activeSubModuleId || 'main'}`;
+
+  if (!quizGenerationInProgress.has(quizKey)) {
+    quizGenerationInProgress.add(quizKey);
+
+    generateModuleQuiz(
+      unit.name || mod.name,
+      course.source,
+      unit.startTime,
+      unit.endTime
+    )
+      .then(questions => {
+        localStorage.setItem(
+          `learnlock_quiz_${quizKey}`,
+          JSON.stringify({
+            questions,
+            generatedAt: Date.now()
+          })
+        );
+      })
+      .catch(error => {
+        console.error('Quiz generation failed:', error);
+      })
+      .finally(() => {
+        quizGenerationInProgress.delete(quizKey);
+      });
+  }
+}
+
   if (youtubePlayer && typeof youtubePlayer.pauseVideo === 'function') {
     youtubePlayer.pauseVideo();
   }
@@ -2345,6 +2376,50 @@ $('btn-timer-pause').addEventListener('click', () => {
 
 $('btn-complete-module').addEventListener('click', async () => {
   if (reviewMode) return;
+
+   // QUIZ: user must pass the module quiz before completion
+if (!reviewMode) {
+  const quizKey = `${activeCourseId}_${activeModuleId}_${activeSubModuleId || 'main'}`;
+  const savedQuiz = localStorage.getItem(`learnlock_quiz_${quizKey}`);
+
+  if (!savedQuiz) {
+    toast('Quiz is still being prepared. Please wait a moment.');
+    return;
+  }
+
+  let quizData;
+
+  try {
+    quizData = JSON.parse(savedQuiz);
+  } catch (error) {
+    console.error('Invalid saved quiz:', error);
+    toast('Quiz data is invalid. Please try again.');
+    return;
+  }
+
+  if (
+    !quizData.questions ||
+    !Array.isArray(quizData.questions) ||
+    quizData.questions.length !== QUIZ_TOTAL_QUESTIONS
+  ) {
+    toast('Quiz is not ready yet. Please wait a moment.');
+    return;
+  }
+
+  const quizScore = Number(
+    prompt(
+      `Module quiz ready: 10 questions.\n\nYou must score at least ${QUIZ_PASSING_SCORE}/10 to complete this module.\n\nEnter your quiz score after completing the quiz:`
+    )
+  );
+
+  if (
+    !Number.isFinite(quizScore) ||
+    quizScore < QUIZ_PASSING_SCORE
+  ) {
+    toast(`Quiz not passed. You need ${QUIZ_PASSING_SCORE}/10 or higher.`);
+    return;
+  }
+}
 
   stopForwardSeekProtection();
   clearInterval(timerInterval);
