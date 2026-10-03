@@ -1175,8 +1175,15 @@ function checkNewAchievements() {
 
   ACHIEVEMENTS.forEach(a => {
     if (!userStats.achievements.includes(a.id) && a.check(userStats)) {
+      userStats.achievements.push(a.id);
+      newlyEarned.push(a);
+    }
+  });
 
-       function checkNewRewards() {
+  return newlyEarned;
+}
+
+function checkNewRewards() {
   const newlyEarned = [];
 
   if (!Array.isArray(userStats.rewards)) {
