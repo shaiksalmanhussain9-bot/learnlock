@@ -1151,22 +1151,6 @@ function registerCompletionForStreak() {
   userStats.lastActiveDate = today;
 }
 
-function checkNewAchievements() {
-  const newlyEarned = [];
-
-  if (!Array.isArray(userStats.achievements)) {
-    userStats.achievements = [];
-  }
-
-  ACHIEVEMENTS.forEach(a => {
-    if (!userStats.achievements.includes(a.id) && a.check(userStats)) {
-      userStats.achievements.push(a.id);
-      newlyEarned.push(a);
-    }
-  });
-
-  return newlyEarned;
-}
       userStats.achievements.push(a.id);
       newlyEarned.push(a);
     }
