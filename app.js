@@ -2541,8 +2541,9 @@ function checkYouTubeSkip() {
     ? timeToSeconds(unit.endTime)
     : Infinity;
 
-  // NEVER allow the video to go beyond this module's end time.
+   // NEVER allow the video to go beyond this module's end time.
   if (currentTime >= unitEndSeconds) {
+    sanctionSeek(1200); // tell the pause handler this is our own stop, not a user click
     youtubePlayer.seekTo(unitEndSeconds, true);
     youtubeLastPolledSeconds = unitEndSeconds;
     youtubeMaxWatchedSeconds = Math.max(
@@ -2552,17 +2553,21 @@ function checkYouTubeSkip() {
 
     youtubePlayer.pauseVideo();
 
-    // Completion is allowed only when BOTH conditions are satisfied:
-    // 1. Timer is finished
-    // 2. Video reached module end time
-    if (timerSecondsLeft <= 0) {
-      updateTimerDisplay();
-      $('btn-complete-module').disabled = false;
+    // Video has ended — let the timer finish immediately too, instead
+    // of leaving it stuck 1 second early with no way to complete.
+    if (timerSecondsLeft > 0) {
+      timerSecondsLeft = 0;
+      clearInterval(timerInterval);
+      timerRunning = false;
+      $('btn-timer-pause').style.display = 'none';
     }
+
+    updateTimerDisplay();
+    $('btn-complete-module').disabled = false;
 
     return true;
   }
-
+   
   // Never let native dragging skip ahead of what's actually been watched.
   if (currentTime > youtubeMaxWatchedSeconds + 1) {
     youtubePlayer.seekTo(youtubeMaxWatchedSeconds, true);
