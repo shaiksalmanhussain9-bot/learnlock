@@ -3122,15 +3122,43 @@ function updateTimerDisplay() {
   const display = $('timer-display');
   display.textContent = formatTime(timerSecondsLeft);
 
+  let videoReachedEnd = false;
+
+  if (
+    youtubePlayer &&
+    typeof youtubePlayer.getCurrentTime === 'function'
+  ) {
+    const course = getActiveCourse();
+    const unit = course ? getActiveUnit(course) : null;
+
+    if (unit) {
+      const endSeconds = timeToSeconds(unit.endTime);
+      const currentSeconds = youtubePlayer.getCurrentTime();
+
+      videoReachedEnd =
+        currentSeconds >= endSeconds ||
+        youtubeMaxWatchedSeconds >= endSeconds;
+    }
+  }
+
+  // Completion requires BOTH:
+  // timer = 00:00
+  // AND video = module end time
+  const moduleReadyToComplete =
+    timerSecondsLeft <= 0 &&
+    videoReachedEnd;
+
   if (timerSecondsLeft <= 0) {
     display.classList.add('done');
-    $('timer-label').textContent = 'Ready to complete!';
-    $('btn-complete-module').disabled = false;
+    $('timer-label').textContent = videoReachedEnd
+      ? 'Ready to complete!'
+      : 'Video still playing — continue to end time';
   } else {
     display.classList.remove('done');
     $('timer-label').textContent = 'Time remaining';
-    $('btn-complete-module').disabled = true;
   }
+
+  $('btn-complete-module').disabled = !moduleReadyToComplete;
 }
 
 $('btn-timer-start').addEventListener('click', () => {
