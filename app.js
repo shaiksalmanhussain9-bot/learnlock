@@ -668,62 +668,63 @@ async function runModuleQuiz(unit) {
       QUIZ_PASSING_SCORE;
 
     if (passed) {
-      quiz.passed = true;
+  quiz.passed = true;
 
-      await saveQuizToCurrentCourse(
-        unit
-      );
+  await saveQuizToCurrentCourse(
+    unit
+  );
 
-      box.innerHTML = `
-        <div style="
-          text-align:center;
-          padding:35px 10px;
-        ">
-          <div style="font-size:55px;">
-            🎉
-          </div>
+  // Keep the quiz questions visible so the user can review
+  // correct answers (green) and wrong selected answers (red).
 
-          <h2>
-            Quiz Passed!
-          </h2>
+  const continueBtn = document.createElement('button');
 
-          <p style="
-            font-size:24px;
-            margin:20px 0;
-          ">
-            Score:
-            <strong>${score}/10</strong>
-          </p>
+  continueBtn.id = 'quiz-continue';
+  continueBtn.type = 'button';
+  continueBtn.textContent = 'Continue';
 
-          <p>
-            You passed with
-            ${QUIZ_PASSING_SCORE}/10 or higher.
-          </p>
+  continueBtn.style.cssText = `
+    margin-top:25px;
+    padding:12px 25px;
+    border:0;
+    border-radius:8px;
+    cursor:pointer;
+  `;
 
-          <button
-            id="quiz-continue"
-            type="button"
-            style="
-              margin-top:25px;
-              padding:12px 25px;
-              border:0;
-              border-radius:8px;
-              cursor:pointer;
-            "
-          >
-            Continue
-          </button>
-        </div>
-      `;
+  const reviewMessage = document.createElement('div');
 
-      box.querySelector(
-        '#quiz-continue'
-      ).onclick = () => {
-        overlay.remove();
-      };
+  reviewMessage.style.cssText = `
+    text-align:center;
+    padding:20px 10px;
+  `;
 
-      return;
-    }
+  reviewMessage.innerHTML = `
+    <div style="font-size:32px;">🎉</div>
+    <h2>Quiz Passed!</h2>
+    <p style="font-size:24px;">
+      Score: <strong>${score}/10</strong>
+    </p>
+    <p>
+      <span style="color:#16a34a;font-weight:700;">
+        ✓ Green = Correct answer
+      </span>
+      <br>
+      <span style="color:#dc2626;font-weight:700;">
+        ✗ Red = Your wrong answer
+      </span>
+    </p>
+  `;
+
+  reviewMessage.appendChild(continueBtn);
+
+  box.appendChild(reviewMessage);
+
+  continueBtn.onclick = () => {
+    overlay.remove();
+  };
+
+  return;
+}
 
     await saveQuizToCurrentCourse(
       unit
